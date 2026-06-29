@@ -8,13 +8,14 @@
 :root {
     --primary-color: #333333;
     --primary-dark: #222222;
-    --background-color: #f5f5f5;
+    --background-color: #e8e8e8;
     --surface-color: #ffffff;
     --text-primary: #111111;
     --text-secondary: #666666;
     --text-light: #ffffff;
     --border-color: #e0e0e0;
     --border-radius: 8px;
+    --badge-padding: 1px 3px;
 }
 
 body {
@@ -40,6 +41,7 @@ body {
     overflow: hidden;
     background-color: var(--surface-color);
     border-radius: 32px;
+    padding: 8px;
 }
 
 /* Navigation */
@@ -115,7 +117,6 @@ body {
 /* Calendar */
 .calendar-container {
     padding: 0 0.5rem 0.5rem;
-    overflow: hidden;
 }
 
 .calendar-grid-wrapper {
@@ -162,13 +163,13 @@ body {
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 0;
+    gap: 8px;
 }
 
 .calendar-day {
     background-color: var(--surface-color);
     padding: 0.5rem 0.25rem;
-    min-height: 60px;
+    min-height: 52px;
     cursor: pointer;
     position: relative;
     display: flex;
@@ -180,27 +181,29 @@ body {
 }
 
 .calendar-day.other-month {
-    opacity: 0.3;
+    opacity: 0.2;
 }
 
-.calendar-day.today {
+.calendar-day.is-today {
     background-color: transparent;
-    color: #4caf50;
 }
 
-.calendar-day.today .solar-date {
+.calendar-day.is-today .solar-date {
+    color: #4caf50;
     border-bottom: none;
     padding-bottom: 0;
 }
 
-.calendar-day.today .lunar-date-small {
+.calendar-day.is-today .lunar-date-small {
     color: #4caf50;
 }
 
+.calendar-day.rest-day {
+    background-color: #ffeaea;
+}
+
 .calendar-day.selected {
-    background-color: transparent;
-    outline: 2px solid var(--primary-color);
-    outline-offset: -2px;
+    box-shadow: inset 0 0 0 2px var(--primary-color);
     border-radius: 16px;
 }
 
@@ -222,14 +225,16 @@ body {
 /* 节假日标记（休/班） */
 .holiday-marker {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 0.6rem;
+    top: -2px;
+    right: -2px;
+    font-size: 0.65rem;
     font-weight: 600;
-    padding: 3px;
+    padding: 2px 4px;
     border-radius: 6px;
-    line-height: 1;
-    z-index: 1;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .holiday-marker.rest {
@@ -244,14 +249,16 @@ body {
 
 .today-label {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 0.6rem;
+    top: -2px;
+    right: -2px;
+    font-size: 0.65rem;
     font-weight: 600;
-    padding: 3px;
+    padding: 2px 4px;
     border-radius: 6px;
-    line-height: 1;
-    z-index: 1;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background-color: #4caf50;
     color: white;
 }
@@ -290,28 +297,32 @@ body {
 }
 
 .detail-label {
-    font-size: 0.6rem;
+    font-size: 0.7rem;
     color: var(--text-secondary);
     margin-bottom: 0.1rem;
 }
 
 .detail-value {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     font-weight: 500;
     color: var(--text-primary);
 }
 
 /* Dark mode */
 body.dark {
-    --background-color: #1a1a1a;
-    --surface-color: #222222;
+    --background-color: #000000;
+    --surface-color: #1a1a1a;
     --text-primary: #e0e0e0;
     --text-secondary: #999999;
     --border-color: #333333;
 }
 
-body.dark .calendar-day.today {
+body.dark .calendar-day.is-today {
     color: #4caf50;
+}
+
+body.dark .calendar-day.rest-day {
+    background-color: #5c1a1a;
 }
 
 body.dark .today-label {
@@ -331,7 +342,7 @@ body.dark .month-year:focus {
 }
 
 body.dark .calendar-day.selected {
-    outline-color: #aaa;
+    box-shadow: inset 0 0 0 2px #aaa;
 }
 
 .dark-toggle {
@@ -366,6 +377,6 @@ body.dark .calendar-day.selected {
     }
     
     .lunar-date-small {
-        font-size: 0.6rem;
+    font-size: 0.5rem;
     }
 }

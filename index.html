@@ -52,6 +52,11 @@
                     <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                     </svg>
+                    <svg class="icon-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
                 </button>
             </div>
         </nav>
@@ -59,13 +64,13 @@
         <!-- Calendar -->
         <main class="calendar-container">
             <div class="weekdays">
-                <div class="weekday">日</div>
                 <div class="weekday">一</div>
                 <div class="weekday">二</div>
                 <div class="weekday">三</div>
                 <div class="weekday">四</div>
                 <div class="weekday">五</div>
                 <div class="weekday">六</div>
+                <div class="weekday">日</div>
             </div>
             <div id="calendar-grid-wrapper" class="calendar-grid-wrapper">
                 <div id="calendar-grid" class="calendar-grid">
@@ -80,21 +85,23 @@
                 <span id="detail-date" class="detail-date"></span>
             </div>
             <div class="detail-body">
+                <!-- Row 1: 农历 生肖 年份 -->
                 <div class="detail-row">
                     <span class="detail-label">农历</span>
                     <span id="detail-lunar" class="detail-value"></span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">干支</span>
-                    <span id="detail-ganzhi" class="detail-value"></span>
+                    <span class="detail-label">生肖</span>
+                    <span id="detail-zodiac" class="detail-value"></span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">年份</span>
                     <span id="detail-year" class="detail-value"></span>
                 </div>
+                <!-- Row 2: 干支 节日 节气 -->
                 <div class="detail-row">
-                    <span class="detail-label">生肖</span>
-                    <span id="detail-zodiac" class="detail-value"></span>
+                    <span class="detail-label">干支</span>
+                    <span id="detail-ganzhi" class="detail-value"></span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">节日</span>
@@ -104,6 +111,7 @@
                     <span class="detail-label">节气</span>
                     <span id="detail-solarterm" class="detail-value"></span>
                 </div>
+            </div>
             </div>
         </div>
 

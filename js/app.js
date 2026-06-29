@@ -41,22 +41,45 @@ class CalendarApp {
             this.gotoSelectedDate();
         });
 
-        // 深色模式切换
+        // 深色模式切换（浅色→深色→自动 三态循环）
         const darkToggle = document.getElementById('dark-toggle');
         const iconSun = darkToggle.querySelector('.icon-sun');
         const iconMoon = darkToggle.querySelector('.icon-moon');
-        const savedDark = localStorage.getItem('darkMode');
-        if (savedDark === 'true') {
-            document.body.classList.add('dark');
+        const iconAuto = darkToggle.querySelector('.icon-auto');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        const modes = ['light', 'dark', 'auto'];
+
+        const updateIcon = (mode) => {
             iconSun.style.display = 'none';
-            iconMoon.style.display = 'block';
-        }
+            iconMoon.style.display = 'none';
+            iconAuto.style.display = 'none';
+            if (mode === 'light') iconSun.style.display = 'block';
+            else if (mode === 'dark') iconMoon.style.display = 'block';
+            else iconAuto.style.display = 'block';
+        };
+
+        const applyTheme = (mode) => {
+            if (mode === 'auto') {
+                document.body.classList.toggle('dark', prefersDark.matches);
+            } else {
+                document.body.classList.toggle('dark', mode === 'dark');
+            }
+        };
+
+        let currentMode = localStorage.getItem('themeMode') || 'auto';
+        applyTheme(currentMode);
+        updateIcon(currentMode);
+
+        prefersDark.addEventListener('change', () => {
+            if (currentMode === 'auto') applyTheme('auto');
+        });
+
         darkToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark');
-            const isDark = document.body.classList.contains('dark');
-            iconSun.style.display = isDark ? 'none' : 'block';
-            iconMoon.style.display = isDark ? 'block' : 'none';
-            localStorage.setItem('darkMode', isDark);
+            const idx = modes.indexOf(currentMode);
+            currentMode = modes[(idx + 1) % modes.length];
+            localStorage.setItem('themeMode', currentMode);
+            applyTheme(currentMode);
+            updateIcon(currentMode);
         });
 
         // PWA 安装提示
@@ -70,6 +93,22 @@ class CalendarApp {
         window.addEventListener('appinstalled', (e) => {
             console.log('PWA 安装完成');
             this.deferredPrompt = null;
+        });
+
+        // 每天零点自动刷新
+        this._scheduleNextDayUpdate();
+
+        // 页面重新可见时检查日期是否变化
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                const today = new Date();
+                if (today.toDateString() !== this.currentDate.toDateString()) {
+                    this.currentDate = today;
+                    this.viewDate = new Date();
+                    this.render();
+                    this.showDayDetails(new Date());
+                }
+            }
         });
 
         // 键盘导航
@@ -283,14 +322,14 @@ class CalendarApp {
         const lastDay = new Date(year, month + 1, 0);
         const daysInMonth = lastDay.getDate();
 
-        // 获取当月第一天是星期几 (0=周日, 1=周一, ..., 6=周六)
-        const firstDayWeek = firstDay.getDay();
+        // 获取当月第一天是星期几 (0=周一, 1=周二, ..., 6=周日)
+        const firstDayWeek = (firstDay.getDay() + 6) % 7;
 
         // 获取上个月最后一天的日期
         const prevMonthLastDay = new Date(year, month, 0);
         const daysInPrevMonth = prevMonthLastDay.getDate();
 
-        // 计算日历开始日期 (确保从周日开始的第一行)
+        // 计算日历开始日期 (确保从周一开始的第一行)
         const calendarStartDate = new Date(year, month, 1 - firstDayWeek);
 
         // 填充6周 × 7天 = 42天的完整日历网格
@@ -321,7 +360,7 @@ class CalendarApp {
             date.getDate() === today.getDate();
 
         if (isToday) {
-            dayElement.classList.add('today');
+            dayElement.classList.add('is-today');
             dayElement.classList.add('selected');
         }
 
@@ -367,6 +406,7 @@ class CalendarApp {
         dayElement.appendChild(markerElement);
 
         // 同步获取节假日标记
+        let hasHolidayMarker = false;
         if (window.holidayService) {
             const marker = window.holidayService.getMarker(
                 date.getFullYear(),
@@ -374,9 +414,11 @@ class CalendarApp {
                 date.getDate()
             );
             if (marker) {
+                hasHolidayMarker = true;
                 markerElement.textContent = marker;
                 if (marker === '休') {
                     markerElement.classList.add('rest');
+                    dayElement.classList.add('rest-day');
                 } else if (marker === '班') {
                     markerElement.classList.add('work');
                 }
@@ -385,10 +427,13 @@ class CalendarApp {
 
         // 今天标记
         if (isToday) {
-            const todayLabel = document.createElement('div');
-            todayLabel.className = 'today-label';
-            todayLabel.textContent = '今';
-            dayElement.appendChild(todayLabel);
+            dayElement.classList.add('is-today');
+            if (!hasHolidayMarker) {
+                const todayLabel = document.createElement('div');
+                todayLabel.className = 'today-label';
+                todayLabel.textContent = '今';
+                dayElement.appendChild(todayLabel);
+            }
         }
 
         // 农历日期
@@ -550,6 +595,19 @@ class CalendarApp {
                 e.preventDefault();
                 break;
         }
+    }
+
+    _scheduleNextDayUpdate() {
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const msUntilMidnight = tomorrow - now;
+        setTimeout(() => {
+            this.currentDate = new Date();
+            this.viewDate = new Date();
+            this.render();
+            this.showDayDetails(new Date());
+            this._scheduleNextDayUpdate();
+        }, msUntilMidnight);
     }
 
 }
