@@ -1,104 +1,75 @@
 /**
- * 节假日数据（内置，无需联网）
- * 数据来源：国务院办公厅官方发布
- * 2024年11月12日发布2025年安排，2025年11月4日发布2026年安排
+ * 节假日服务 - API + 本地缓存
+ * 有网时从API获取并缓存，离线时使用缓存数据
+ * API来源: timor.tech
  */
-
-const HOLIDAY_DATA = {
-    2025: {
-        '01-01': { name: '元旦', holiday: true },
-        '01-26': { name: '春节', holiday: false },
-        '01-28': { name: '春节', holiday: true },
-        '01-29': { name: '春节', holiday: true },
-        '01-30': { name: '春节', holiday: true },
-        '01-31': { name: '春节', holiday: true },
-        '02-01': { name: '春节', holiday: true },
-        '02-02': { name: '春节', holiday: true },
-        '02-03': { name: '春节', holiday: true },
-        '02-04': { name: '春节', holiday: true },
-        '02-08': { name: '春节', holiday: false },
-        '04-04': { name: '清明节', holiday: true },
-        '04-05': { name: '清明节', holiday: true },
-        '04-06': { name: '清明节', holiday: true },
-        '04-27': { name: '劳动节', holiday: false },
-        '05-01': { name: '劳动节', holiday: true },
-        '05-02': { name: '劳动节', holiday: true },
-        '05-03': { name: '劳动节', holiday: true },
-        '05-04': { name: '劳动节', holiday: true },
-        '05-05': { name: '劳动节', holiday: true },
-        '05-31': { name: '端午节', holiday: true },
-        '06-01': { name: '端午节', holiday: true },
-        '06-02': { name: '端午节', holiday: true },
-        '09-28': { name: '国庆节', holiday: false },
-        '10-01': { name: '国庆节', holiday: true },
-        '10-02': { name: '国庆节', holiday: true },
-        '10-03': { name: '国庆节', holiday: true },
-        '10-04': { name: '国庆节', holiday: true },
-        '10-05': { name: '国庆节', holiday: true },
-        '10-06': { name: '国庆节', holiday: true },
-        '10-07': { name: '国庆节', holiday: true },
-        '10-08': { name: '国庆节', holiday: true },
-        '10-11': { name: '国庆节', holiday: false }
-    },
-    2026: {
-        '01-01': { name: '元旦', holiday: true },
-        '01-02': { name: '元旦', holiday: true },
-        '01-03': { name: '元旦', holiday: true },
-        '01-04': { name: '元旦', holiday: false },
-        '02-14': { name: '春节', holiday: false },
-        '02-15': { name: '春节', holiday: true },
-        '02-16': { name: '春节', holiday: true },
-        '02-17': { name: '春节', holiday: true },
-        '02-18': { name: '春节', holiday: true },
-        '02-19': { name: '春节', holiday: true },
-        '02-20': { name: '春节', holiday: true },
-        '02-21': { name: '春节', holiday: true },
-        '02-22': { name: '春节', holiday: true },
-        '02-23': { name: '春节', holiday: true },
-        '02-28': { name: '春节', holiday: false },
-        '04-04': { name: '清明节', holiday: true },
-        '04-05': { name: '清明节', holiday: true },
-        '04-06': { name: '清明节', holiday: true },
-        '05-01': { name: '劳动节', holiday: true },
-        '05-02': { name: '劳动节', holiday: true },
-        '05-03': { name: '劳动节', holiday: true },
-        '05-04': { name: '劳动节', holiday: true },
-        '05-05': { name: '劳动节', holiday: true },
-        '05-09': { name: '劳动节', holiday: false },
-        '06-19': { name: '端午节', holiday: true },
-        '06-20': { name: '端午节', holiday: true },
-        '06-21': { name: '端午节', holiday: true },
-        '09-20': { name: '国庆节', holiday: false },
-        '09-25': { name: '中秋节', holiday: true },
-        '09-26': { name: '中秋节', holiday: true },
-        '09-27': { name: '中秋节', holiday: true },
-        '10-01': { name: '国庆节', holiday: true },
-        '10-02': { name: '国庆节', holiday: true },
-        '10-03': { name: '国庆节', holiday: true },
-        '10-04': { name: '国庆节', holiday: true },
-        '10-05': { name: '国庆节', holiday: true },
-        '10-06': { name: '国庆节', holiday: true },
-        '10-07': { name: '国庆节', holiday: true },
-        '10-10': { name: '国庆节', holiday: false }
-    }
-};
 
 class HolidayService {
     constructor() {
         this.cache = {};
+        this.updating = false;
+        this.currentYear = new Date().getFullYear();
+        this.API_BASE = 'https://timor.tech/api/holiday/year';
+        this.CACHE_KEY = 'holiday_cache';
+        
+        this.loadCache();
+        this.updateFromAPI();
+    }
+
+    loadCache() {
+        try {
+            const cached = localStorage.getItem(this.CACHE_KEY);
+            if (cached) {
+                this.cache = JSON.parse(cached);
+            }
+        } catch (e) {
+            console.warn('加载缓存失败:', e);
+        }
+    }
+
+    saveCache() {
+        try {
+            localStorage.setItem(this.CACHE_KEY, JSON.stringify(this.cache));
+        } catch (e) {
+            console.warn('保存缓存失败:', e);
+        }
+    }
+
+    async updateFromAPI() {
+        if (this.updating) return;
+        this.updating = true;
+
+        const years = [this.currentYear - 2, this.currentYear - 1, this.currentYear, this.currentYear + 1];
+        
+        for (const year of years) {
+            try {
+                const response = await fetch(`${this.API_BASE}/${year}`);
+                if (!response.ok) continue;
+                
+                const result = await response.json();
+                if (result.code === 0 && result.holiday) {
+                    const data = {};
+                    for (const [date, info] of Object.entries(result.holiday)) {
+                        data[date] = {
+                            name: info.name.replace(/[（休）（班）]/g, ''),
+                            holiday: info.holiday
+                        };
+                    }
+                    this.cache[year] = data;
+                }
+            } catch (e) {
+                console.warn(`获取${year}年数据失败:`, e);
+            }
+        }
+
+        this.saveCache();
+        this.updating = false;
     }
 
     getYearData(year) {
         if (this.cache[year]) {
             return this.cache[year];
         }
-
-        const data = HOLIDAY_DATA[year];
-        if (data) {
-            this.cache[year] = data;
-            return data;
-        }
-
         return null;
     }
 
