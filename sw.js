@@ -1,9 +1,9 @@
 /**
  * Service Worker for Chinese Lunar Calendar PWA
- * 万年历 Service Worker
+ * 日历 Service Worker
  */
 
-const CACHE_NAME = 'chinese-calendar-v1.4.0';  // ← Change this when you update JS/CSS
+const CACHE_NAME = 'chinese-calendar-v1.6.0';  // ← Change this when you update JS/CSS
 const RUNTIME_CACHE = 'chinese-calendar-runtime';
 
 // 动态获取基础路径（支持 GitHub Pages 子目录）
@@ -29,6 +29,7 @@ const STATIC_ASSETS = [
     './js/app.js',
     './js/calendar.js',
     './js/lunar.js',
+    './js/holiday.js',
     './icons/icon-72x72.svg',
     './icons/icon-96x96.svg',
     './icons/icon-128x128.svg',

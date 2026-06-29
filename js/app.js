@@ -1,5 +1,5 @@
 /**
- * 万年历应用主程序
+ * 日历应用主程序
  * Chinese Lunar Calendar PWA Main Application
  */
 
@@ -15,76 +15,48 @@ class CalendarApp {
 
     init() {
         this.bindEvents();
-        this.checkInstallPrompt();
-        this.checkOnlineStatus();
         this.render();
+        this.showDayDetails(new Date());
     }
 
     bindEvents() {
         // 导航按钮
         document.getElementById('prev-month').addEventListener('click', () => {
-            this.viewDate.setMonth(this.viewDate.getMonth() - 1);
-            this.render();
-            this.updateDatePicker();
+            this.slideMonth('right');
         });
 
         document.getElementById('next-month').addEventListener('click', () => {
-            this.viewDate.setMonth(this.viewDate.getMonth() + 1);
-            this.render();
-            this.updateDatePicker();
+            this.slideMonth('left');
         });
 
         // 今天按钮
         document.getElementById('today-btn').addEventListener('click', () => {
             this.viewDate = new Date();
             this.render();
-            this.updateDatePicker();
+            this.showDayDetails(new Date());
         });
 
-        // 快速跳转日期
-        document.getElementById('goto-date-btn').addEventListener('click', () => {
+        // 日期选择器改变
+        document.getElementById('current-month').addEventListener('change', () => {
             this.gotoSelectedDate();
         });
 
-        document.getElementById('date-picker').addEventListener('change', () => {
-            this.gotoSelectedDate();
-        });
-
-        document.getElementById('date-picker').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.gotoSelectedDate();
-            }
-        });
-
-        // 安装按钮
-        document.getElementById('install-btn').addEventListener('click', () => {
-            this.installApp();
-        });
-
-        // 帮助按钮
-        document.getElementById('help-btn').addEventListener('click', () => {
-            this.showHelpModal();
-        });
-
-        // 模态框
-        document.getElementById('close-modal').addEventListener('click', () => {
-            this.closeModal();
-        });
-
-        document.getElementById('close-help-modal').addEventListener('click', () => {
-            this.closeHelpModal();
-        });
-
-        document.getElementById('day-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'day-modal') {
-                this.closeModal();
-            }
-        });
-
-        document.getElementById('help-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'help-modal') {
-                this.closeHelpModal();
-            }
+        // 深色模式切换
+        const darkToggle = document.getElementById('dark-toggle');
+        const iconSun = darkToggle.querySelector('.icon-sun');
+        const iconMoon = darkToggle.querySelector('.icon-moon');
+        const savedDark = localStorage.getItem('darkMode');
+        if (savedDark === 'true') {
+            document.body.classList.add('dark');
+            iconSun.style.display = 'none';
+            iconMoon.style.display = 'block';
+        }
+        darkToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            iconSun.style.display = isDark ? 'none' : 'block';
+            iconMoon.style.display = isDark ? 'block' : 'none';
+            localStorage.setItem('darkMode', isDark);
         });
 
         // PWA 安装提示
@@ -92,31 +64,16 @@ class CalendarApp {
             console.log('beforeinstallprompt 事件触发');
             e.preventDefault();
             this.deferredPrompt = e;
-            this.showInstallButton();
         });
 
         // PWA 安装完成
         window.addEventListener('appinstalled', (e) => {
             console.log('PWA 安装完成');
             this.deferredPrompt = null;
-            document.getElementById('install-btn').style.display = 'none';
-        });
-
-        // 在线状态检测
-        window.addEventListener('online', () => {
-            this.updateOnlineStatus(true);
-        });
-
-        window.addEventListener('offline', () => {
-            this.updateOnlineStatus(false);
         });
 
         // 键盘导航
         document.addEventListener('keydown', (e) => {
-            // 如果用户正在输入日期，不处理快捷键
-            if (document.activeElement.id === 'date-picker') {
-                return;
-            }
             this.handleKeyboardNavigation(e);
         });
 
@@ -134,8 +91,6 @@ class CalendarApp {
 
         let startX = 0;
         let startY = 0;
-        let endX = 0;
-        let endY = 0;
         let isDragging = false;
 
         // 触摸开始
@@ -155,14 +110,13 @@ class CalendarApp {
             // 忽略模态框内的触摸
             if (e.target.closest('.modal')) return;
             
-            endX = e.touches[0].clientX;
-            endY = e.touches[0].clientY;
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const deltaX = Math.abs(currentX - startX);
+            const deltaY = Math.abs(currentY - startY);
             
-            // 防止页面滚动（仅在水平滑动时）
-            const deltaX = Math.abs(endX - startX);
-            const deltaY = Math.abs(endY - startY);
-            
-            if (deltaX > deltaY && deltaX > 10) {
+            // 防止页面滚动（仅在明确水平滑动时）
+            if (deltaX > deltaY && deltaX > 20) {
                 e.preventDefault();
             }
         }, { passive: false });
@@ -174,24 +128,32 @@ class CalendarApp {
             // 忽略模态框内的触摸
             if (e.target.closest('.modal')) return;
             
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
             const deltaX = endX - startX;
             const deltaY = endY - startY;
-            const minSwipeDistance = 50; // 最小滑动距离
-            const maxVerticalDistance = 100; // 最大垂直偏移
 
-            // 检查是否为有效的水平滑动
-            if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaY) < maxVerticalDistance) {
-                if (deltaX > 0) {
-                    // 向右滑动 - 上一个月
-                    this.viewDate.setMonth(this.viewDate.getMonth() - 1);
-                    this.render();
-                    this.updateDatePicker();
-                } else {
-                    // 向左滑动 - 下一个月
-                    this.viewDate.setMonth(this.viewDate.getMonth() + 1);
-                    this.render();
-                    this.updateDatePicker();
-                }
+            // 移动距离太小，视为点击
+            const minSwipeDistance = 80;
+            const maxVerticalDistance = 60;
+
+            if (Math.abs(deltaX) < minSwipeDistance) {
+                isDragging = false;
+                return;
+            }
+
+            // 检查是否为有效的水平滑动（垂直偏移必须很小）
+            if (Math.abs(deltaY) > maxVerticalDistance) {
+                isDragging = false;
+                return;
+            }
+
+            if (deltaX > 0) {
+                // 向右滑动 - 上一个月
+                this.slideMonth('right');
+            } else {
+                // 向左滑动 - 下一个月
+                this.slideMonth('left');
             }
             
             isDragging = false;
@@ -201,27 +163,112 @@ class CalendarApp {
         appContainer.addEventListener('dragstart', (e) => {
             e.preventDefault();
         });
+
+        // 下拉刷新
+        let pullStartY = 0;
+        let pullStartX = 0;
+        let pulling = false;
+        let pulled = false;
+        let decided = false;
+        let rafId = null;
+        let currentH = 0;
+        const pullIndicator = document.createElement('div');
+        pullIndicator.id = 'pull-indicator';
+        pullIndicator.textContent = '↓ 下拉刷新';
+        pullIndicator.style.cssText = 'text-align:center;font-size:0.75rem;color:#999;height:0;overflow:hidden;width:100%;position:fixed;top:0;left:0;z-index:100;';
+        document.body.prepend(pullIndicator);
+
+        document.addEventListener('touchstart', (e) => {
+            if (window.scrollY <= 0) {
+                pullStartY = e.touches[0].clientY;
+                pullStartX = e.touches[0].clientX;
+                pulling = true;
+                pulled = false;
+                decided = false;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!pulling) return;
+            const deltaY = e.touches[0].clientY - pullStartY;
+            const deltaX = Math.abs(e.touches[0].clientX - pullStartX);
+
+            if (!decided && (deltaX > 15 || deltaY > 15)) {
+                decided = true;
+                if (deltaX > deltaY) {
+                    pulling = false;
+                    return;
+                }
+            }
+
+            if (decided && deltaX > deltaY) {
+                pulling = false;
+                return;
+            }
+
+            if (deltaY > 10 && window.scrollY <= 0 && !pulled) {
+                e.preventDefault();
+                currentH = Math.min(deltaY * 0.5, 200);
+                if (!rafId) {
+                    rafId = requestAnimationFrame(() => {
+                        pullIndicator.style.height = currentH + 'px';
+                        pullIndicator.style.lineHeight = currentH + 'px';
+                        const showRefresh = currentH > 150;
+                        if (showRefresh !== pullIndicator._wasRefresh) {
+                            pullIndicator.textContent = showRefresh ? '↑ 释放刷新' : '↓ 下拉刷新';
+                            pullIndicator._wasRefresh = showRefresh;
+                        }
+                        rafId = null;
+                    });
+                }
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', () => {
+            if (!pulling) return;
+            pulling = false;
+            pulled = true;
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = null;
+            pullIndicator.style.height = '0';
+            pullIndicator.style.lineHeight = '0';
+            pullIndicator._wasRefresh = false;
+            if (currentH > 150) {
+                pullIndicator.textContent = '刷新中...';
+                location.reload(true);
+            }
+            currentH = 0;
+        }, { passive: true });
     }
 
     render() {
         this.renderHeader();
         this.renderCalendar();
-        this.updateDatePicker();
+    }
+
+    slideMonth(direction) {
+        const wrapper = document.getElementById('calendar-grid-wrapper');
+        const animClass = direction === 'left' ? 'slide-left' : 'slide-right';
+
+        wrapper.classList.add(animClass);
+
+        setTimeout(() => {
+            if (direction === 'left') {
+                this.viewDate.setMonth(this.viewDate.getMonth() + 1);
+            } else {
+                this.viewDate.setMonth(this.viewDate.getMonth() - 1);
+            }
+            this.render();
+        }, 150);
+
+        setTimeout(() => {
+            wrapper.classList.remove(animClass);
+        }, 300);
     }
 
     renderHeader() {
         const monthYearElement = document.getElementById('current-month');
-        const lunarElement = document.getElementById('current-lunar');
-
-        const year = this.viewDate.getFullYear();
-        const month = this.viewDate.getMonth() + 1;
-
-        monthYearElement.textContent = `${year}年${month}月`;
-
-        // 显示当前月份的农历信息
-        const firstDay = new Date(year, this.viewDate.getMonth(), 1);
-        const dateInfo = this.calendar.getDateInfo(firstDay);
-        lunarElement.textContent = `${dateInfo.lunar.yearGanZhi}年 生肖${dateInfo.lunar.zodiac}`;
+        monthYearElement.value = this.formatDate(this.viewDate);
     }
 
     renderCalendar() {
@@ -275,6 +322,7 @@ class CalendarApp {
 
         if (isToday) {
             dayElement.classList.add('today');
+            dayElement.classList.add('selected');
         }
 
         // 添加weekday类用于样式
@@ -313,6 +361,36 @@ class CalendarApp {
         solarDateElement.textContent = date.getDate();
         dayElement.appendChild(solarDateElement);
 
+        // 节假日标记（休/班）
+        const markerElement = document.createElement('div');
+        markerElement.className = 'holiday-marker';
+        dayElement.appendChild(markerElement);
+
+        // 同步获取节假日标记
+        if (window.holidayService) {
+            const marker = window.holidayService.getMarker(
+                date.getFullYear(),
+                date.getMonth() + 1,
+                date.getDate()
+            );
+            if (marker) {
+                markerElement.textContent = marker;
+                if (marker === '休') {
+                    markerElement.classList.add('rest');
+                } else if (marker === '班') {
+                    markerElement.classList.add('work');
+                }
+            }
+        }
+
+        // 今天标记
+        if (isToday) {
+            const todayLabel = document.createElement('div');
+            todayLabel.className = 'today-label';
+            todayLabel.textContent = '今';
+            dayElement.appendChild(todayLabel);
+        }
+
         // 农历日期
         const lunarDateElement = document.createElement('div');
         lunarDateElement.className = 'lunar-date-small';
@@ -344,21 +422,17 @@ class CalendarApp {
         lunarDateElement.textContent = displayText;
         dayElement.appendChild(lunarDateElement);
 
-        // 添加指示器
-        if (dateInfo.traditionalFestival || dateInfo.modernFestival) {
-            const festivalIndicator = document.createElement('div');
-            festivalIndicator.className = 'festival-indicator';
-            dayElement.appendChild(festivalIndicator);
-        }
 
-        if (dateInfo.solarTerm) {
-            const solarTermIndicator = document.createElement('div');
-            solarTermIndicator.className = 'solar-term-indicator';
-            dayElement.appendChild(solarTermIndicator);
-        }
 
         // 点击事件
         dayElement.addEventListener('click', () => {
+            // 移除之前的选中状态
+            const prevSelected = document.querySelector('.calendar-day.selected');
+            if (prevSelected) {
+                prevSelected.classList.remove('selected');
+            }
+            // 添加当前选中状态
+            dayElement.classList.add('selected');
             this.showDayDetails(date);
         });
 
@@ -366,14 +440,13 @@ class CalendarApp {
     }
 
     showDayDetails(date) {
-        const modal = document.getElementById('day-modal');
+        const detailPanel = document.getElementById('day-detail');
 
         let dateInfo;
         try {
             dateInfo = this.calendar.getDateInfo(date);
         } catch (error) {
-            console.error('Error getting date info for modal:', error);
-            // 显示基本信息
+            console.error('Error getting date info for detail:', error);
             dateInfo = {
                 solar: {
                     year: date.getFullYear(),
@@ -382,9 +455,6 @@ class CalendarApp {
                     weekday: date.getDay()
                 },
                 lunar: {
-                    year: date.getFullYear(),
-                    month: date.getMonth() + 1,
-                    day: date.getDate(),
                     yearGanZhi: '未知',
                     zodiac: '未知'
                 },
@@ -399,131 +469,61 @@ class CalendarApp {
             };
         }
 
-        // 设置标题
-        const modalDate = document.getElementById('modal-date');
+        // 设置日期标题
         const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
         const weekdayName = weekdays[date.getDay()];
-        modalDate.textContent = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${weekdayName}`;
+        document.getElementById('detail-date').textContent = 
+            `${date.getMonth() + 1}月${date.getDate()}日 ${weekdayName}`;
 
-        // 农历信息
-        const modalLunar = document.getElementById('modal-lunar');
-        modalLunar.innerHTML = `
-            <h4>农历信息</h4>
-            <p>农历：${dateInfo.formatted ? dateInfo.formatted.lunar : '未知'}</p>
-            <p>干支：${dateInfo.formatted ? dateInfo.formatted.ganZhi : '未知'}</p>
-            <p>年份：${dateInfo.lunar ? dateInfo.lunar.yearGanZhi : '未知'}年</p>
-        `;
+        // 农历
+        document.getElementById('detail-lunar').textContent = 
+            dateInfo.formatted ? dateInfo.formatted.lunar : '未知';
 
-        // 生肖信息
-        const modalZodiac = document.getElementById('modal-zodiac');
-        modalZodiac.innerHTML = `
-            <h4>生肖</h4>
-            <p>生肖：${dateInfo.formatted ? dateInfo.formatted.zodiac : '未知'}</p>
-        `;
+        // 干支
+        document.getElementById('detail-ganzhi').textContent = 
+            dateInfo.formatted ? dateInfo.formatted.ganZhi : '未知';
 
-        // 节日信息
-        const modalFestivals = document.getElementById('modal-festivals');
-        let festivalsHTML = '<h4>节日</h4>';
+        // 年份
+        const yearGanZhi = dateInfo.lunar ? dateInfo.lunar.yearGanZhi : '未知';
+        document.getElementById('detail-year').textContent = `${yearGanZhi}年`;
+
+        // 生肖
+        document.getElementById('detail-zodiac').textContent = 
+            dateInfo.formatted ? dateInfo.formatted.zodiac : '未知';
+
+        // 节日
+        let festivalText = '无';
         if (dateInfo.traditionalFestival) {
-            festivalsHTML += `<p>传统节日：${dateInfo.traditionalFestival}</p>`;
+            festivalText = dateInfo.traditionalFestival;
+        } else if (dateInfo.modernFestival) {
+            festivalText = dateInfo.modernFestival;
         }
-        if (dateInfo.modernFestival) {
-            festivalsHTML += `<p>现代节日：${dateInfo.modernFestival}</p>`;
-        }
-        if (!dateInfo.traditionalFestival && !dateInfo.modernFestival) {
-            festivalsHTML += '<p>无特殊节日</p>';
-        }
-        modalFestivals.innerHTML = festivalsHTML;
+        document.getElementById('detail-festival').textContent = festivalText;
 
-        // 节气信息
-        const modalSolarTerm = document.getElementById('modal-solar-term');
-        let solarTermHTML = '<h4>节气</h4>';
-        if (dateInfo.solarTerm) {
-            solarTermHTML += `<p>节气：${dateInfo.solarTerm}</p>`;
-        } else {
-            solarTermHTML += '<p>无节气</p>';
-        }
-        modalSolarTerm.innerHTML = solarTermHTML;
+        // 节气
+        document.getElementById('detail-solarterm').textContent = 
+            dateInfo.solarTerm || '无';
 
-        modal.style.display = 'flex';
+        // 显示详情面板
+        detailPanel.style.display = 'block';
     }
 
-    closeModal() {
-        const modal = document.getElementById('day-modal');
-        modal.style.display = 'none';
-    }
+    gotoSelectedDate() {
+        const datePicker = document.getElementById('current-month');
+        const selectedDate = datePicker.value;
 
-    showHelpModal() {
-        const modal = document.getElementById('help-modal');
-        modal.style.display = 'flex';
-    }
-
-    closeHelpModal() {
-        const modal = document.getElementById('help-modal');
-        modal.style.display = 'none';
-    }
-
-    checkInstallPrompt() {
-        // 检查是否已经安装
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            console.log('PWA已安装');
-            return;
-        }
-
-        // 检查是否支持PWA安装
-        if (!('serviceWorker' in navigator)) {
-            console.log('浏览器不支持Service Worker');
-            return;
-        }
-
-        console.log('PWA安装检查完成，等待beforeinstallprompt事件');
-
-        // 如果已经有延迟的提示，显示安装按钮
-        if (this.deferredPrompt) {
-            this.showInstallButton();
+        if (selectedDate) {
+            const [year, month] = selectedDate.split('-').map(Number);
+            this.viewDate = new Date(year, month - 1, 1);
+            this.render();
+            this.showDayDetails(this.viewDate);
         }
     }
 
-    showInstallButton() {
-        const installBtn = document.getElementById('install-btn');
-        if (installBtn) {
-            installBtn.style.display = 'block';
-            console.log('安装按钮已显示');
-        } else {
-            console.error('未找到安装按钮元素');
-        }
-    }
-
-    async installApp() {
-        if (!this.deferredPrompt) {
-            alert('应用已安装或浏览器不支持安装');
-            return;
-        }
-
-        this.deferredPrompt.prompt();
-        const { outcome } = await this.deferredPrompt.userChoice;
-
-        if (outcome === 'accepted') {
-            console.log('用户同意安装PWA');
-        } else {
-            console.log('用户拒绝安装PWA');
-        }
-
-        this.deferredPrompt = null;
-        document.getElementById('install-btn').style.display = 'none';
-    }
-
-    checkOnlineStatus() {
-        this.updateOnlineStatus(navigator.onLine);
-    }
-
-    updateOnlineStatus(isOnline) {
-        const offlineIndicator = document.getElementById('offline-indicator');
-        if (isOnline) {
-            offlineIndicator.style.display = 'none';
-        } else {
-            offlineIndicator.style.display = 'block';
-        }
+    formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
     }
 
     handleKeyboardNavigation(e) {
@@ -539,164 +539,19 @@ class CalendarApp {
                 this.render();
                 break;
             case 'Home':
+            case 't':
+            case 'T':
                 e.preventDefault();
                 this.viewDate = new Date();
                 this.render();
+                this.showDayDetails(new Date());
                 break;
             case 'Escape':
                 e.preventDefault();
-                this.closeModal();
-                this.closeHelpModal();
-                break;
-            case 'g':
-            case 'G':
-                // 按 G 键快速聚焦到日期选择器
-                if (!e.ctrlKey && !e.altKey) {
-                    e.preventDefault();
-                    document.getElementById('date-picker').focus();
-                }
-                break;
-            case 't':
-            case 'T':
-                // 按 T 键快速回到今天
-                if (!e.ctrlKey && !e.altKey) {
-                    e.preventDefault();
-                    this.viewDate = new Date();
-                    this.render();
-                }
-                break;
-            case 'h':
-            case 'H':
-            case '?':
-                // 按 H 或 ? 键显示帮助
-                if (!e.ctrlKey && !e.altKey) {
-                    e.preventDefault();
-                    this.showHelpModal();
-                }
                 break;
         }
     }
 
-    /**
-     * 跳转到选定的日期
-     */
-    gotoSelectedDate() {
-        const datePicker = document.getElementById('date-picker');
-        const selectedDate = datePicker.value;
-
-        if (selectedDate) {
-            const [year, month, day] = selectedDate.split('-').map(Number);
-
-            // 验证日期范围（1900-2100，与农历数据范围一致）
-            if (year < 1900 || year > 2100) {
-                this.showDateNavigationError('日期范围应在1900年到2100年之间');
-                return;
-            }
-
-            this.viewDate = new Date(year, month - 1, day);
-            this.render();
-
-            // 提供用户反馈
-            this.showDateNavigationFeedback(year, month, day);
-        } else {
-            this.showDateNavigationError('请选择有效的日期');
-        }
-    }
-
-    /**
-     * 更新日期选择器的值
-     */
-    updateDatePicker() {
-        const datePicker = document.getElementById('date-picker');
-        const year = this.viewDate.getFullYear();
-        const month = String(this.viewDate.getMonth() + 1).padStart(2, '0');
-        const day = String(this.viewDate.getDate()).padStart(2, '0');
-        datePicker.value = `${year}-${month}-${day}`;
-    }
-
-    /**
-     * 显示日期导航反馈
-     */
-    showDateNavigationFeedback(year, month, day) {
-        // 创建临时提示元素
-        const feedback = document.createElement('div');
-        feedback.className = 'date-navigation-feedback';
-        feedback.textContent = `已跳转到 ${year}年${month}月${day}日`;
-
-        // 添加到页面
-        document.body.appendChild(feedback);
-
-        // 显示动画
-        requestAnimationFrame(() => {
-            feedback.style.opacity = '1';
-            feedback.style.transform = 'translateY(0)';
-        });
-
-        // 2秒后移除
-        setTimeout(() => {
-            feedback.style.opacity = '0';
-            feedback.style.transform = 'translateY(-20px)';
-            setTimeout(() => {
-                if (feedback.parentNode) {
-                    feedback.parentNode.removeChild(feedback);
-                }
-            }, 300);
-        }, 2000);
-    }
-
-    /**
-     * 显示日期导航错误
-     */
-    showDateNavigationError(message) {
-        // 创建错误提示元素
-        const feedback = document.createElement('div');
-        feedback.className = 'date-navigation-feedback error';
-        feedback.textContent = message;
-
-        // 添加到页面
-        document.body.appendChild(feedback);
-
-        // 显示动画
-        requestAnimationFrame(() => {
-            feedback.style.opacity = '1';
-            feedback.style.transform = 'translateY(0)';
-        });
-
-        // 3秒后移除
-        setTimeout(() => {
-            feedback.style.opacity = '0';
-            feedback.style.transform = 'translateY(-20px)';
-            setTimeout(() => {
-                if (feedback.parentNode) {
-                    feedback.parentNode.removeChild(feedback);
-                }
-            }, 300);
-        }, 3000);
-    }
-
-    /**
-     * 测试方法：验证日历渲染正确性
-     */
-    testCalendarRendering() {
-        console.log('Testing calendar rendering...');
-
-        // 测试几个特殊日期
-        const testDates = [
-            new Date(2023, 0, 1),   // 2023年1月1日 (星期日)
-            new Date(2023, 11, 25), // 2023年12月25日 (星期一)
-            new Date(2024, 0, 1),   // 2024年1月1日 (星期一)
-            new Date(2024, 11, 25), // 2024年12月25日 (星期三)
-            new Date()              // 今天
-        ];
-
-        testDates.forEach(date => {
-            const weekday = date.getDay();
-            const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
-            console.log(`${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 星期${weekdayNames[weekday]} (${weekday})`);
-        });
-
-        return true;
-    }
 }
 
 // 应用启动

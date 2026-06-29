@@ -1,5 +1,5 @@
 /**
- * 万年历计算模块 (基于 6tail/luna-javascript)
+ * 日历计算模块 (基于 6tail/luna-javascript)
  * Chinese Lunar Calendar Calculation Module (Based on 6tail/luna-javascript)
  */
 

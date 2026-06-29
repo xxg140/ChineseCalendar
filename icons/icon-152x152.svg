@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="152" height="152" viewBox="0 0 152 152" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-        <style>
-            .text { font-family: serif; font-weight: bold; text-anchor: middle; dominant-baseline: central; }
-        </style>
-    </defs>
-    <rect width="152" height="152" fill="#d32f2f" rx="15.200000000000001"/>
-    <circle cx="76" cy="76" r="53.199999999999996" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-    <text x="76" y="68.4" class="text" font-size="45.6" fill="white">历</text>
-    <text x="76" y="98.8" class="text" font-size="12.16" fill="rgba(255,255,255,0.8)">农历</text>
+<svg width="152" height="152" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="120" rx="28" fill="#f5f5f7"/>
+    <rect x="28" y="36" width="64" height="52" rx="12" fill="#1d1d1f"/>
+    <rect x="28" y="36" width="64" height="16" rx="12" fill="#1d1d1f"/>
+    <line x1="46" y1="28" x2="46" y2="44" stroke="#1d1d1f" stroke-width="5" stroke-linecap="round"/>
+    <line x1="74" y1="28" x2="74" y2="44" stroke="#1d1d1f" stroke-width="5" stroke-linecap="round"/>
+    <text x="60" y="78" text-anchor="middle" font-size="24" font-weight="600" fill="white">29</text>
 </svg>
