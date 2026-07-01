@@ -17,6 +17,27 @@ class CalendarApp {
         this.bindEvents();
         this.render();
         this.showDayDetails(new Date());
+
+        // 节假日数据预热：首屏渲染完成后再异步触发
+        const warmup = () => {
+            if (window.holidayService && typeof window.holidayService.warmup === 'function') {
+                window.holidayService.warmup();
+            }
+        };
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(warmup, { timeout: 1500 });
+        } else {
+            setTimeout(warmup, 200);
+        }
+
+        // 节假日数据到达后，局部刷新当前视图标记
+        window.addEventListener('holiday-updated', () => {
+            if (typeof this.renderHolidays === 'function') {
+                this.renderHolidays();
+            } else {
+                this.render();
+            }
+        });
     }
 
     bindEvents() {

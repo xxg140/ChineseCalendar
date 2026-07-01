@@ -11,9 +11,55 @@ class HolidayService {
         this.currentYear = new Date().getFullYear();
         this.API_BASE = 'https://timor.tech/api/holiday/year';
         this.CACHE_KEY = 'holiday_cache';
-        
+
         this.loadCache();
-        this.updateFromAPI();
+        // 不再构造时立刻拉取，改为外部显式调用 warmup()
+    }
+
+    /**
+     * 预热缓存：先只拉当年，其他年份在 render() 时按需补齐
+     * 调用方应保证在首屏渲染完成后再触发
+     */
+    warmup() {
+        this.fetchYear(this.currentYear);
+    }
+
+    fetchYear(year) {
+        if (this.updating) return;
+        this.updating = true;
+
+        fetch(`${this.API_BASE}/${year}`)
+            .then((response) => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
+            .then((result) => {
+                if (result.code === 0 && result.holiday) {
+                    const data = {};
+                    for (const [date, info] of Object.entries(result.holiday)) {
+                        data[date] = {
+                            name: info.name.replace(/[（休）（班）]/g, ''),
+                            holiday: info.holiday
+                        };
+                    }
+                    this.cache[year] = data;
+                    this.saveCache();
+                    // 通知 UI 重新渲染节假日标记
+                    window.dispatchEvent(new CustomEvent('holiday-updated', { detail: { year } }));
+                }
+            })
+            .catch((e) => {
+                console.warn(`获取${year}年数据失败:`, e);
+            })
+            .finally(() => {
+                this.updating = false;
+            });
+    }
+
+    // 兼容旧调用：仍然可用 updateFromAPI() 一次拉多年
+    updateFromAPI() {
+        const years = [this.currentYear - 2, this.currentYear - 1, this.currentYear, this.currentYear + 1];
+        years.forEach((y) => this.fetchYear(y));
     }
 
     loadCache() {
@@ -33,37 +79,6 @@ class HolidayService {
         } catch (e) {
             console.warn('保存缓存失败:', e);
         }
-    }
-
-    async updateFromAPI() {
-        if (this.updating) return;
-        this.updating = true;
-
-        const years = [this.currentYear - 2, this.currentYear - 1, this.currentYear, this.currentYear + 1];
-        
-        for (const year of years) {
-            try {
-                const response = await fetch(`${this.API_BASE}/${year}`);
-                if (!response.ok) continue;
-                
-                const result = await response.json();
-                if (result.code === 0 && result.holiday) {
-                    const data = {};
-                    for (const [date, info] of Object.entries(result.holiday)) {
-                        data[date] = {
-                            name: info.name.replace(/[（休）（班）]/g, ''),
-                            holiday: info.holiday
-                        };
-                    }
-                    this.cache[year] = data;
-                }
-            } catch (e) {
-                console.warn(`获取${year}年数据失败:`, e);
-            }
-        }
-
-        this.saveCache();
-        this.updating = false;
     }
 
     getYearData(year) {

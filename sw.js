@@ -3,7 +3,7 @@
  * 日历 Service Worker
  */
 
-const CACHE_NAME = 'chinese-calendar-v1.6.0';  // ← Change this when you update JS/CSS
+const CACHE_NAME = 'chinese-calendar-v1.7.0';  // ← Change this when you update JS/CSS
 const RUNTIME_CACHE = 'chinese-calendar-runtime';
 
 // 动态获取基础路径（支持 GitHub Pages 子目录）
@@ -20,6 +20,7 @@ const getBasePath = () => {
 const BASE_PATH = getBasePath();
 
 // 需要缓存的静态资源（使用相对路径）
+// 安装阶段只缓存首屏必需资源，避免阻塞首次安装
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -30,13 +31,7 @@ const STATIC_ASSETS = [
     './js/calendar.js',
     './js/lunar.js',
     './js/holiday.js',
-    './icons/icon-72x72.svg',
-    './icons/icon-96x96.svg',
-    './icons/icon-128x128.svg',
-    './icons/icon-144x144.svg',
-    './icons/icon-152x152.svg',
     './icons/icon-192x192.svg',
-    './icons/icon-384x384.svg',
     './icons/icon-512x512.svg'
 ];
 
@@ -99,23 +94,25 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 对于导航请求（页面请求），使用网络优先策略
+    // 对于导航请求（页面请求），使用 stale-while-revalidate
+    // 先秒开缓存，后台静默更新；离线/缓存未命中时回退首页
     if (request.mode === 'navigate') {
         event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    // 如果网络请求成功，更新缓存并返回响应
-                    const responseClone = response.clone();
-                    caches.open(RUNTIME_CACHE)
-                        .then((cache) => {
-                            cache.put(request, responseClone);
-                        });
-                    return response;
-                })
-                .catch(() => {
-                    // 如果网络失败，从缓存返回首页
-                    return caches.match('./index.html') || caches.match('/index.html');
-                })
+            caches.match(request).then((cachedResponse) => {
+                const fetchPromise = fetch(request)
+                    .then((response) => {
+                        if (response && response.status === 200) {
+                            const responseClone = response.clone();
+                            caches.open(RUNTIME_CACHE).then((cache) => {
+                                cache.put(request, responseClone);
+                            });
+                        }
+                        return response;
+                    })
+                    .catch(() => null);
+                // 有缓存立刻返回，没有就等网络
+                return cachedResponse || fetchPromise || caches.match('./index.html') || caches.match('/index.html');
+            })
         );
         return;
     }
