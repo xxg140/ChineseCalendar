@@ -313,7 +313,7 @@ body {
 /* Dark mode */
 body.dark {
     --background-color: #000000;
-    --surface-color: rgb(22, 24, 26);
+    --surface-color: rgb(25, 27, 29);
     --text-primary: #e0e0e0;
     --text-secondary: #999999;
     --border-color: #333333;
