@@ -4,18 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="日历 - 离线可用的渐进式网页应用">
-    <meta name="theme-color" content="#1d1d1f">
+    <meta name="theme-color" id="theme-color-meta" content="#f5f5f5">
     <title>日历</title>
+
+    <!-- 首屏前同步浏览器 UI 配色：安装成 PWA 后标题栏/任务栏随主题变色 -->
+    <script>
+        (() => {
+            const mode = localStorage.getItem('themeMode') || 'auto';
+            const dark = mode === 'auto' ? matchMedia('(prefers-color-scheme: dark)').matches : mode === 'dark';
+            document.getElementById('theme-color-meta').content = dark ? '#000000' : '#f5f5f5';
+        })();
+    </script>
     
     <!-- PWA manifest -->
     <link rel="manifest" href="manifest.json">
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <!-- Favicon：透明底，深浅色标签栏自动适配 -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2">
     
-    <!-- App icon (single scalable SVG; covers all sizes) -->
-    <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icon-512x512.svg">
-    <link rel="apple-touch-icon" href="icons/icon-512x512.svg">
+    <!-- 主屏/桌面安装图标：必须用不透明 PNG，透明区会被启动器填成黑色 -->
+    <link rel="apple-touch-icon" href="icons/icon-180x180.png?v=1">
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/styles.css?v=1.3">

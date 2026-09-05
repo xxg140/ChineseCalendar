@@ -80,11 +80,10 @@ class CalendarApp {
         };
 
         const applyTheme = (mode) => {
-            if (mode === 'auto') {
-                document.body.classList.toggle('dark', prefersDark.matches);
-            } else {
-                document.body.classList.toggle('dark', mode === 'dark');
-            }
+            const isDark = mode === 'auto' ? prefersDark.matches : mode === 'dark';
+            document.body.classList.toggle('dark', isDark);
+            // 同步浏览器 UI 配色（安装成 PWA 后即为标题栏/任务栏颜色）
+            document.getElementById('theme-color-meta').content = isDark ? '#000000' : '#f5f5f5';
         };
 
         let currentMode = localStorage.getItem('themeMode') || 'auto';
