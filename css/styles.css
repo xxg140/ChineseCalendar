@@ -206,13 +206,14 @@ body {
 
 .calendar-day.selected {
     box-shadow: inset 0 0 0 2px var(--primary-color);
-    border-radius: 16px;
+    border-radius: 18px;
 }
 
 .solar-date {
     font-size: 18px;
     font-weight: 600;
-    margin-bottom: 0.15rem;
+    line-height: 1.1;
+    margin-bottom: 0;
 }
 
 .lunar-date-small {

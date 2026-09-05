@@ -15,22 +15,24 @@ class ChineseCalendar {
 
     /**
      * 阳历转农历
+     * @param {Date} date 日期
+     * @param {Object} [lunar] 已创建的 Lunar 对象（复用时避免重复计算）
      */
-    solarToLunar(date) {
+    solarToLunar(date, lunar) {
         try {
-            const lunar = this.Lunar.fromDate(date);
+            const l = lunar || this.Lunar.fromDate(date);
 
             return {
-                year: lunar.getYear(),
-                month: lunar.getMonth(),
-                day: lunar.getDay(),
-                isLeapMonth: lunar.getMonth() < 0, // 负数表示闰月
-                monthName: lunar.getMonthInChinese(),
-                dayName: lunar.getDayInChinese(),
-                yearGanZhi: lunar.getYearInGanZhi(),
-                monthGanZhi: lunar.getMonthInGanZhi(),
-                dayGanZhi: lunar.getDayInGanZhi(),
-                zodiac: lunar.getYearShengXiao()
+                year: l.getYear(),
+                month: l.getMonth(),
+                day: l.getDay(),
+                isLeapMonth: l.getMonth() < 0, // 负数表示闰月
+                monthName: l.getMonthInChinese(),
+                dayName: l.getDayInChinese(),
+                yearGanZhi: l.getYearInGanZhi(),
+                monthGanZhi: l.getMonthInGanZhi(),
+                dayGanZhi: l.getDayInGanZhi(),
+                zodiac: l.getYearShengXiao()
             };
         } catch (error) {
             console.error('solarToLunar error:', error);
@@ -41,11 +43,11 @@ class ChineseCalendar {
     /**
      * 获取二十四节气
      */
-    getSolarTerm(date) {
-        const lunar = this.Lunar.fromDate(date);
+    getSolarTerm(date, lunar) {
+        const l = lunar || this.Lunar.fromDate(date);
 
         // 使用lunar库的getJieQi()方法获取节气
-        const jieQi = lunar.getJieQi();
+        const jieQi = l.getJieQi();
 
         // 如果当天有节气，返回节气名称
         return jieQi || null;
@@ -73,16 +75,16 @@ class ChineseCalendar {
     /**
      * 获取传统节日
      */
-    getTraditionalFestival(date) {
+    getTraditionalFestival(date, lunar) {
         try {
-            const lunar = this.Lunar.fromDate(date);
-            
+            const l = lunar || this.Lunar.fromDate(date);
+
             // 获取农历节日
-            const lunarFestivals = lunar.getFestivals();
+            const lunarFestivals = l.getFestivals();
             if (lunarFestivals && lunarFestivals.length > 0) {
                 return lunarFestivals[0]; // 返回第一个节日
             }
-            
+
             return null;
         } catch (error) {
             console.error('getTraditionalFestival error:', error);
@@ -93,16 +95,17 @@ class ChineseCalendar {
     /**
      * 获取现代节日
      */
-    getModernFestival(date) {
+    getModernFestival(date, lunar) {
         try {
-            const solar = this.Lunar.fromDate(date).getSolar();
-            
+            const l = lunar || this.Lunar.fromDate(date);
+            const solar = l.getSolar();
+
             // 获取阳历节日
             const solarFestivals = solar.getFestivals();
             if (solarFestivals && solarFestivals.length > 0) {
                 return solarFestivals[0]; // 返回第一个节日
             }
-            
+
             return null;
         } catch (error) {
             console.error('getModernFestival error:', error);
@@ -114,10 +117,12 @@ class ChineseCalendar {
      * 获取完整的日期信息
      */
     getDateInfo(date) {
-        const lunarInfo = this.solarToLunar(date);
-        const solarTerm = this.getSolarTerm(date);
-        const traditionalFestival = this.getTraditionalFestival(date);
-        const modernFestival = this.getModernFestival(date);
+        // 只创建一次 Lunar 对象，四项转换复用，避免每天 4 次重复的 fromDate 计算
+        const lunar = this.Lunar.fromDate(date);
+        const lunarInfo = this.solarToLunar(date, lunar);
+        const solarTerm = this.getSolarTerm(date, lunar);
+        const traditionalFestival = this.getTraditionalFestival(date, lunar);
+        const modernFestival = this.getModernFestival(date, lunar);
 
         return {
             solar: {
