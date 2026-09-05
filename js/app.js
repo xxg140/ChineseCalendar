@@ -442,6 +442,7 @@ class CalendarApp {
                     dayElement.classList.add('rest-day');
                 } else if (marker === '班') {
                     markerElement.classList.add('work');
+                    dayElement.classList.add('work-day');
                 }
             }
         }
