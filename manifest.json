@@ -14,7 +14,7 @@
       "src": "icons/icon-512x512.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "purpose": "any"
     }
   ],
   "categories": ["utilities", "lifestyle"]

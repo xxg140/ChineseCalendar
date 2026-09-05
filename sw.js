@@ -3,7 +3,7 @@
  * 日历 Service Worker
  */
 
-const CACHE_NAME = 'chinese-calendar-v1.7.3';  // ← Change this when you update JS/CSS
+const CACHE_NAME = 'chinese-calendar-v1.7.4';  // ← Change this when you update JS/CSS
 const RUNTIME_CACHE = 'chinese-calendar-runtime';
 
 // 需要缓存的静态资源（使用相对路径）
@@ -18,7 +18,6 @@ const STATIC_ASSETS = [
     './js/calendar.js',
     './js/lunar.js',
     './js/holiday.js',
-    './icons/icon-192x192.svg',
     './icons/icon-512x512.svg'
 ];
 
