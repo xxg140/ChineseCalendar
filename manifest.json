@@ -11,13 +11,13 @@
   "lang": "zh-CN",
   "icons": [
     {
-      "src": "icons/icon-512x512.svg?v=10",
+      "src": "icons/icon-512x512.svg?v=12",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-180x180.png?v=7",
+      "src": "icons/icon-180x180.png?v=9",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"

@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-    <rect width="512" height="512" fill="#000000"/>
-    <rect width="512" height="150" fill="#d4482b"/>
+    <defs>
+        <!-- SEP 镂空：红条上按字形挖穿，透出背后的桌面 / 标签栏颜色 -->
+        <mask id="sep-cut" maskUnits="userSpaceOnUse">
+            <rect width="512" height="150" fill="#ffffff"/>
+            <text x="256" y="112" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="64" font-weight="900" fill="#000000" letter-spacing="8">SEP</text>
+        </mask>
+    </defs>
+    <rect width="512" height="150" fill="#d4482b" mask="url(#sep-cut)"/>
     <rect x="118" y="18" width="34" height="86" rx="17" fill="#2b2621"/>
     <rect x="360" y="18" width="34" height="86" rx="17" fill="#2b2621"/>
     <rect x="112" y="40" width="46" height="26" rx="13" fill="none" stroke="#e8e2d5" stroke-width="10"/>
     <rect x="354" y="40" width="46" height="26" rx="13" fill="none" stroke="#e8e2d5" stroke-width="10"/>
-    <text x="256" y="112" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="64" font-weight="900" fill="#ffe9d9" letter-spacing="8">SEP</text>
-    <text x="256" y="436" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="290" font-weight="900" fill="#8a8a8a">7</text>
+    <text x="256" y="436" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="290" font-weight="900" fill="#2b2621">7</text>
 </svg>
