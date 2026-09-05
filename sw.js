@@ -3,7 +3,7 @@
  * 日历 Service Worker
  */
 
-const CACHE_NAME = 'chinese-calendar-v1.7.6';  // ← Change this when you update JS/CSS
+const CACHE_NAME = 'chinese-calendar-v1.7.9';  // ← Change this when you update JS/CSS
 const RUNTIME_CACHE = 'chinese-calendar-runtime';
 
 // 需要缓存的静态资源（使用相对路径）
@@ -12,16 +12,13 @@ const STATIC_ASSETS = [
     './',
     './index.html',
     './manifest.json',
-    './favicon.svg',
     './css/styles.css',
     './js/app.js',
     './js/calendar.js',
     './js/lunar.js',
     './js/holiday.js',
     './icons/icon-512x512.svg',
-    './icons/icon-180x180.png',
-    './icons/icon-192x192.png',
-    './icons/icon-512x512.png'
+    './icons/icon-180x180.png'
 ];
 
 // 静态资源的 pathname（相对 sw.js 所在目录解析，天然兼容根目录与子目录部署）
