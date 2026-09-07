@@ -81,7 +81,7 @@ class CalendarApp {
 
         const applyTheme = (mode) => {
             const isDark = mode === 'auto' ? prefersDark.matches : mode === 'dark';
-            document.body.classList.toggle('dark', isDark);
+            document.documentElement.classList.toggle('dark', isDark);
         };
 
         let currentMode = localStorage.getItem('themeMode') || 'auto';

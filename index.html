@@ -17,6 +17,17 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/styles.css?v=1.3">
+
+    <!-- 阻塞式内联脚本：在浏览器渲染前应用主题，防止闪白/闪黑 -->
+    <script>
+        (function() {
+            var mode = localStorage.getItem('themeMode') || 'auto';
+            var isDark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
 </head>
 <body>
     <div id="app">
