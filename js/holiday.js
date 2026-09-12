@@ -56,12 +56,6 @@ class HolidayService {
             });
     }
 
-    // 兼容旧调用：仍然可用 updateFromAPI() 一次拉多年
-    updateFromAPI() {
-        const years = [this.currentYear - 2, this.currentYear - 1, this.currentYear, this.currentYear + 1];
-        years.forEach((y) => this.fetchYear(y));
-    }
-
     loadCache() {
         try {
             const cached = localStorage.getItem(this.CACHE_KEY);
@@ -82,10 +76,7 @@ class HolidayService {
     }
 
     getYearData(year) {
-        if (this.cache[year]) {
-            return this.cache[year];
-        }
-        return null;
+        return this.cache[year] || null;
     }
 
     getMarker(year, month, day) {
