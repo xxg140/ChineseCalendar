@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png?v=12">
     
     <!-- CSS -->
-    <link rel="stylesheet" href="css/styles.css?v=1.4">
+    <link rel="stylesheet" href="css/styles.css?v=1.5">
 
     <!-- 阻塞式内联脚本：在浏览器渲染前应用主题，防止闪白/闪黑 -->
     <script>
@@ -106,18 +106,14 @@
                     <span class="detail-label">年份</span>
                     <span id="detail-year" class="detail-value"></span>
                 </div>
-                <!-- Row 2: 干支 节日 节气 -->
-                <div class="detail-row">
-                    <span class="detail-label">干支</span>
-                    <span id="detail-ganzhi" class="detail-value"></span>
+                <!-- Row 2: 黄历宜忌 -->
+                <div class="detail-row huangli-row">
+                    <span class="huangli-badge yi">宜</span>
+                    <div id="detail-yi" class="huangli-list"></div>
                 </div>
-                <div class="detail-row">
-                    <span class="detail-label">节日</span>
-                    <span id="detail-festival" class="detail-value"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">节气</span>
-                    <span id="detail-solarterm" class="detail-value"></span>
+                <div class="detail-row huangli-row">
+                    <span class="huangli-badge ji">忌</span>
+                    <div id="detail-ji" class="huangli-list"></div>
                 </div>
             </div>
         </div>
@@ -129,7 +125,7 @@
     <script defer src="js/lunar.js"></script>
     <script defer src="js/calendar.js"></script>
     <script defer src="js/holiday.js"></script>
-    <script defer src="js/app.js?v=1.5"></script>
+    <script defer src="js/app.js?v=1.7"></script>
     
     <!-- Service Worker Registration -->
     <script>

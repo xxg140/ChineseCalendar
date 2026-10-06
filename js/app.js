@@ -371,14 +371,25 @@ class CalendarApp {
         document.getElementById('detail-date').textContent =
             `${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}`;
         document.getElementById('detail-lunar').textContent = dateInfo.formatted.lunar;
-        document.getElementById('detail-ganzhi').textContent = dateInfo.formatted.ganZhi;
         document.getElementById('detail-year').textContent = `${dateInfo.lunar.yearGanZhi}年`;
         document.getElementById('detail-zodiac').textContent = dateInfo.formatted.zodiac;
-        document.getElementById('detail-festival').textContent =
-            dateInfo.traditionalFestival || dateInfo.modernFestival || '无';
-        document.getElementById('detail-solarterm').textContent = dateInfo.solarTerm || '无';
+
+        const huangli = this.calendar.getHuangli(date);
+        this._renderHuangliItems('detail-yi', huangli.yi);
+        this._renderHuangliItems('detail-ji', huangli.ji);
 
         document.getElementById('day-detail').style.display = 'block';
+    }
+
+    _renderHuangliItems(elementId, items) {
+        const box = document.getElementById(elementId);
+        box.textContent = '';
+        items.forEach(text => {
+            const item = document.createElement('span');
+            item.className = 'huangli-item';
+            item.textContent = text;
+            box.appendChild(item);
+        });
     }
 
     gotoSelectedDate() {

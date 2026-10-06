@@ -300,6 +300,49 @@ body {
     color: var(--text-primary);
 }
 
+/* 黄历宜忌 */
+.huangli-row {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+}
+
+.huangli-badge {
+    flex: none;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+
+.huangli-badge.yi {
+    background-color: #4caf50;
+}
+
+.huangli-badge.ji {
+    background-color: #e53935;
+}
+
+.huangli-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.huangli-item {
+    white-space: nowrap;
+}
+
 /* Dark mode */
 html.dark {
     --background-color: #000000;

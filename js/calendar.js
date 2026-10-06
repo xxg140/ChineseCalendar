@@ -37,8 +37,6 @@ class ChineseCalendar {
                 monthName,
                 dayName,
                 yearGanZhi: l.getYearInGanZhi(),
-                monthGanZhi: l.getMonthInGanZhi(),
-                dayGanZhi: l.getDayInGanZhi(),
                 zodiac: l.getYearShengXiao()
             },
             solarTerm: l.getJieQi() || null,
@@ -46,9 +44,20 @@ class ChineseCalendar {
             modernFestival: l.getSolar().getFestivals()[0] || null,
             formatted: {
                 lunar: `${monthName}月${dayName}`,
-                ganZhi: l.getDayInGanZhi(),
                 zodiac: l.getYearShengXiao()
             }
+        };
+    }
+
+    /**
+     * 获取黄历宜忌
+     * 查表需整串扫描 DAY_YI_JI，开销较大，仅供选中日期的详情面板调用
+     */
+    getHuangli(date) {
+        const l = this.Lunar.fromDate(date);
+        return {
+            yi: l.getDayYi(),
+            ji: l.getDayJi()
         };
     }
 }
