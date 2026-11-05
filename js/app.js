@@ -285,6 +285,11 @@ class CalendarApp {
         const year = this.viewDate.getFullYear();
         const month = this.viewDate.getMonth();
 
+        // 确保当前视图涉及年份的节假日已加载（含跨年显示的相邻月份）
+        window.holidayService.ensureYear(year);
+        if (month === 0) window.holidayService.ensureYear(year - 1);
+        if (month === 11) window.holidayService.ensureYear(year + 1);
+
         // 当月第一天是星期几 (0=周一, ..., 6=周日)，据此回退到网格起点（周一）
         const firstDayWeek = (new Date(year, month, 1).getDay() + 6) % 7;
         const calendarStartDate = new Date(year, month, 1 - firstDayWeek);

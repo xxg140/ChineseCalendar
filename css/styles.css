@@ -350,7 +350,11 @@ html.dark {
     --text-primary: #e0e0e0;
     --text-secondary: #999999;
     --border-color: #333333;
-    --card-shadow: 0 2px 12px rgba(255, 255, 255, 0.2);
+}
+
+html.dark #app {
+    box-shadow: none;
+    border: 1px solid var(--border-color);
 }
 
 html.dark .calendar-day.is-today {
