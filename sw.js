@@ -6,7 +6,7 @@
  * index.html / manifest.json 里不再带 ?v= 参数。
  */
 
-const CACHE_NAME = 'chinese-calendar-v0.3';  // 提交时自动 +1
+const CACHE_NAME = 'chinese-calendar-v0.5';  // 提交时自动 +1
 const RUNTIME_CACHE = 'chinese-calendar-runtime';
 
 // 需要缓存的静态资源（使用相对路径）
@@ -110,7 +110,8 @@ self.addEventListener('fetch', (event) => {
     if (request.mode === 'navigate') {
         event.respondWith(
             caches.match(request).then((cachedResponse) => {
-                const fetchPromise = fetch(request)
+                // cache: 'reload' 绕过浏览器 HTTP 缓存，避免把旧文件再写回 SW 缓存
+                const fetchPromise = fetch(request, { cache: 'reload' })
                     .then((response) => {
                         if (response && response.status === 200) {
                             const responseClone = response.clone();
@@ -134,7 +135,8 @@ self.addEventListener('fetch', (event) => {
     if (STATIC_PATHNAMES.includes(url.pathname) || url.pathname.startsWith(ICONS_PREFIX)) {
         event.respondWith(
             caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
-                const fetchPromise = fetch(request)
+                // cache: 'reload' 绕过浏览器 HTTP 缓存，避免把旧文件再写回 SW 缓存
+                const fetchPromise = fetch(request, { cache: 'reload' })
                     .then((response) => {
                         if (response && response.status === 200) {
                             const responseClone = response.clone();

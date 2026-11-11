@@ -312,10 +312,49 @@ class CalendarApp {
             pullIndicator._wasRefresh = false;
             if (currentH > 150) {
                 pullIndicator.textContent = '刷新中...';
-                location.reload(true);
+                this._forceReload();
             }
             currentH = 0;
         }, { passive: true });
+    }
+
+    /**
+     * 强制刷新：先注销 Service Worker 并清掉缓存，再带时间戳跳转，确保拿到线上最新文件
+     */
+    _forceReload() {
+        console.log('[强制刷新] 开始执行');
+        let done = false;
+        const go = () => {
+            if (done) return;
+            done = true;
+            console.log('[强制刷新] 跳转到新 URL');
+            location.replace(location.href.split('?')[0] + '?t=' + Date.now());
+        };
+
+        const clear = async () => {
+            if (!navigator.serviceWorker) return;
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            console.log('[强制刷新] 找到 ' + registrations.length + ' 个 Service Worker 注册');
+            await Promise.all(registrations.map(registration =>
+                registration.unregister()
+                    .then(success => {
+                        console.log('[强制刷新] SW 注销结果: ' + (success ? '成功' : '失败') + ' (scope: ' + registration.scope + ')');
+                    })
+                    .catch(err => {
+                        console.warn('[强制刷新] SW 注销异常: ' + err.message);
+                    })
+            ));
+            if (typeof caches !== 'undefined') {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(key => caches.delete(key)));
+            }
+        };
+
+        clear()
+            .catch(err => console.warn('[强制刷新] SW 注销流程异常: ' + err.message))
+            .finally(go);
+        // 2 秒兜底：防止 SW 接口异常或页面后台冻结时注销流程永远不结束
+        setTimeout(go, 2000);
     }
 
     render() {
