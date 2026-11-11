@@ -709,16 +709,6 @@ html.dark .calendar-day.selected {
     box-shadow: inset 0 0 0 2px #aaa;
 }
 
-/* 触屏设备：输入框字号不小于 16px，避免 iOS Safari 聚焦时自动放大页面 */
-@media (hover: none) and (pointer: coarse) {
-    .month-year,
-    .note-text-input,
-    .form-date-input,
-    .form-select {
-        font-size: 16px;
-    }
-}
-
 /* Print styles */
 @media print {
     #app {

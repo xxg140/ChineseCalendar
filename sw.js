@@ -6,7 +6,7 @@
  * index.html / manifest.json 里不再带 ?v= 参数。
  */
 
-const CACHE_NAME = 'chinese-calendar-v0.2';  // 提交时自动 +1
+const CACHE_NAME = 'chinese-calendar-v0.3';  // 提交时自动 +1
 const RUNTIME_CACHE = 'chinese-calendar-runtime';
 
 // 需要缓存的静态资源（使用相对路径）
