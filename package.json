@@ -5,7 +5,8 @@
   "main": "index.html",
   "scripts": {
     "dev": "http-server -p 3000 -c-1",
-    "build": "node scripts/stamp-sw.js"
+    "build": "echo 'Build completed - no minification needed for this simple project'",
+    "prepare": "git config core.hooksPath .githooks || exit 0"
   },
   "keywords": [
     "chinese",

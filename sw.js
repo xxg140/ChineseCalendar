@@ -2,11 +2,11 @@
  * Service Worker for Chinese Lunar Calendar PWA
  * 日历 Service Worker
  *
- * CACHE_NAME 由构建脚本 scripts/stamp-sw.js 在 npm run build 时自动写入版本与时间戳，
- * 请勿手工维护；若跳过构建直接部署静态文件，需要手动更新下面的 CACHE_NAME。
+ * 版本号由 .githooks/pre-commit 在提交前端资源时自动 +1（v1.1 → v1.2，v1.9 → v2.0），
+ * index.html / manifest.json 里不再带 ?v= 参数。
  */
 
-const CACHE_NAME = 'chinese-calendar-v1.18.0';
+const CACHE_NAME = 'chinese-calendar-v0.2';  // 提交时自动 +1
 const RUNTIME_CACHE = 'chinese-calendar-runtime';
 
 // 需要缓存的静态资源（使用相对路径）

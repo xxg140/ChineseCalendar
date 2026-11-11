@@ -1,0 +1,37 @@
+#!/bin/sh
+# 提交前自动把 sw.js 的缓存版本号 +1（v1.1 → v1.2；v1.9 → v2.0）。
+# 仅当前端资源有暂存改动时触发；纯文档/配置提交不会清缓存。
+
+set -e
+
+STAGED=$(git -c core.quotepath=false diff --cached --name-only)
+
+if ! printf '%s\n' "$STAGED" | grep -qE '^(index\.html|manifest\.json|sw\.js|css/|js/|icons/)'; then
+    echo "【版本号】本次提交未涉及前端资源，跳过自动升版本"
+    exit 0
+fi
+
+# sw.js 有未暂存改动时直接改工作区会把它们一起带进提交，先让用户处理
+if ! git diff --quiet -- sw.js; then
+    echo "【版本号】sw.js 存在未暂存改动，请先 git add sw.js 再提交"
+    exit 1
+fi
+
+CURRENT=$(grep -oE "chinese-calendar-v[0-9]+\.[0-9]+" sw.js | head -n 1 || true)
+if [ -z "$CURRENT" ]; then
+    echo "【版本号】未在 sw.js 中找到形如 chinese-calendar-v1.1 的版本号"
+    exit 1
+fi
+
+MAJOR=$(printf '%s' "$CURRENT" | sed -E 's/.*-v([0-9]+)\..*/\1/')
+MINOR=$(printf '%s' "$CURRENT" | sed -E 's/.*-v[0-9]+\.([0-9]+)/\1/')
+NEW_MINOR=$((MINOR + 1))
+if [ "$NEW_MINOR" -ge 10 ]; then
+    MAJOR=$((MAJOR + 1))
+    NEW_MINOR=0
+fi
+NEXT="chinese-calendar-v${MAJOR}.${NEW_MINOR}"
+
+sed -i "s/${CURRENT}/${NEXT}/" sw.js
+git add sw.js
+echo "【版本号】${CURRENT} → ${NEXT}"

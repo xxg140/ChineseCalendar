@@ -155,6 +155,7 @@
                         <div class="form-row" id="note-date-row">
                             <span class="form-label">日期</span>
                             <input type="date" id="note-date" class="form-date-input">
+                            <span id="note-solar-hint" class="form-hint"></span>
                         </div>
 
                         <div class="form-row" id="note-lunar-row" hidden>
@@ -163,6 +164,7 @@
                                 <select id="note-lunar-month" class="form-select"></select>
                                 <select id="note-lunar-day" class="form-select"></select>
                             </div>
+                            <span id="note-lunar-hint" class="form-hint"></span>
                         </div>
 
                         <div class="form-row" id="note-weekday-row" hidden>
@@ -170,7 +172,10 @@
                             <select id="note-weekday" class="form-select"></select>
                         </div>
 
-                        <button type="button" id="note-add" class="settings-primary-btn">添加备注</button>
+                        <div class="note-form-actions">
+                            <button type="button" id="note-add" class="settings-primary-btn">添加备注</button>
+                            <button type="button" id="note-cancel-edit" class="settings-btn" hidden>取消编辑</button>
+                        </div>
                     </div>
 
                     <div id="note-manage-list" class="note-manage-list"></div>

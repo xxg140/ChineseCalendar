@@ -3,6 +3,12 @@
  * Chinese Lunar Calendar PWA Main Application
  */
 
+// 日历格子空间有限，超长节日名用简称显示，完整名称见下方详情面板
+const FESTIVAL_SHORT_NAMES = {
+    '消费者权益日': '3·15',
+    '万圣节前夜': '万圣夜'
+};
+
 class CalendarApp {
     constructor() {
         this.calendar = new ChineseCalendar();
@@ -11,6 +17,7 @@ class CalendarApp {
         this.deferredPrompt = null;
         this.noteStore = new NoteStore();
         this.selectedDateKey = null;
+        this.editingNoteId = null;
 
         this.init();
     }
@@ -83,7 +90,11 @@ class CalendarApp {
             document.getElementById('note-weekday').value = String(this._formDate().getDay());
             this._syncNoteForm(true);
         });
+        ['note-lunar-month', 'note-lunar-day'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => this._syncNoteForm(false));
+        });
         document.getElementById('note-add').addEventListener('click', () => this.addNote());
+        document.getElementById('note-cancel-edit').addEventListener('click', () => this._cancelEdit());
         document.getElementById('note-text').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -430,8 +441,9 @@ class CalendarApp {
         // 农历日期：优先显示节日、节气，初一显示月份，其余显示农历日
         const lunarDateElement = document.createElement('div');
         lunarDateElement.className = 'lunar-date-small';
-        lunarDateElement.textContent = dateInfo.traditionalFestival
-            || dateInfo.modernFestival
+        const festival = dateInfo.traditionalFestival || dateInfo.modernFestival;
+        const festivalLabel = festival ? (FESTIVAL_SHORT_NAMES[festival] || festival) : null;
+        lunarDateElement.textContent = festivalLabel
             || dateInfo.solarTerm
             || (dateInfo.lunar.day === 1 ? dateInfo.lunar.monthName + '月' : dateInfo.lunar.dayName);
         dayElement.appendChild(lunarDateElement);
@@ -460,8 +472,9 @@ class CalendarApp {
 
         this.selectedDateKey = NoteStore.toKey(date);
 
+        const festival = dateInfo.traditionalFestival || dateInfo.modernFestival;
         document.getElementById('detail-date').textContent =
-            `${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}`;
+            `${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}${festival ? ' · ' + festival : ''}`;
         document.getElementById('detail-lunar').textContent = dateInfo.formatted.lunar;
         document.getElementById('detail-year').textContent = `${dateInfo.lunar.yearGanZhi}年`;
         document.getElementById('detail-zodiac').textContent = dateInfo.formatted.zodiac;
@@ -533,6 +546,8 @@ class CalendarApp {
         document.getElementById('note-date').value = NoteStore.toKey(baseDate);
         document.getElementById('note-weekday').value = String(baseDate.getDay());
 
+        this.editingNoteId = null;
+        this._syncEditUi();
         this._syncNoteForm(true);
         this.renderNoteManageList();
     }
@@ -558,6 +573,38 @@ class CalendarApp {
             document.getElementById('note-lunar-month').value = String(lunar.getMonth());
             document.getElementById('note-lunar-day').value = String(lunar.getDay());
         }
+
+        this._updateCalendarHint();
+    }
+
+    /**
+     * 在表单旁显示另一种历法的对照日期
+     */
+    _updateCalendarHint() {
+        const solarHint = document.getElementById('note-solar-hint');
+        const lunarHint = document.getElementById('note-lunar-hint');
+        solarHint.textContent = '';
+        lunarHint.textContent = '';
+
+        if (this.noteForm.repeat === 'weekly') return;
+
+        if (this.noteForm.calendar === 'lunar') {
+            const lunarYear = Lunar.fromDate(this._formDate()).getYear();
+            const month = Number(document.getElementById('note-lunar-month').value);
+            const day = Number(document.getElementById('note-lunar-day').value);
+
+            try {
+                const solar = Lunar.fromYmd(lunarYear, month, day).getSolar();
+                lunarHint.textContent = `新历 ${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日`;
+            } catch (e) {
+                // 例如农历三十遇到只有二十九天的月份
+                lunarHint.textContent = '该农历日期不存在';
+            }
+            return;
+        }
+
+        const lunar = Lunar.fromDate(this._formDate());
+        solarHint.textContent = `农历 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`;
     }
 
     _formDate() {
@@ -600,9 +647,14 @@ class CalendarApp {
             data.day = date.getDate();
         }
 
-        if (!this.noteStore.add(data)) return;
+        const saved = this.editingNoteId
+            ? this.noteStore.update(this.editingNoteId, data)
+            : this.noteStore.add(data);
+        if (!saved) return;
 
+        this.editingNoteId = null;
         textInput.value = '';
+        this._syncEditUi();
         this.renderNoteManageList();
         this.showDayDetails(date);
         this.renderCalendar();
@@ -624,6 +676,7 @@ class CalendarApp {
         notes.forEach(note => {
             const row = document.createElement('div');
             row.className = 'note-manage-item';
+            if (note.id === this.editingNoteId) row.classList.add('editing');
 
             const info = document.createElement('div');
             info.className = 'note-manage-info';
@@ -639,6 +692,10 @@ class CalendarApp {
             info.appendChild(text);
             info.appendChild(rule);
 
+            const editBtn = this._createNoteAction('编辑', 'note-edit-option', () => {
+                this._startNoteEdit(note);
+            });
+
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'note-remove';
@@ -646,6 +703,11 @@ class CalendarApp {
             removeBtn.setAttribute('aria-label', '删除备注');
             removeBtn.addEventListener('click', () => {
                 this.noteStore.remove(note.id);
+                if (this.editingNoteId === note.id) {
+                    this.editingNoteId = null;
+                    document.getElementById('note-text').value = '';
+                    this._syncEditUi();
+                }
                 this.renderNoteManageList();
                 this.renderCalendar();
                 if (this.selectedDateKey) {
@@ -654,9 +716,74 @@ class CalendarApp {
             });
 
             row.appendChild(info);
+            row.appendChild(editBtn);
             row.appendChild(removeBtn);
             listBox.appendChild(row);
         });
+    }
+
+    _createNoteAction(label, className, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = className;
+        btn.textContent = label;
+        btn.addEventListener('click', onClick);
+        return btn;
+    }
+
+    /**
+     * 把已有备注回填到表单，保存时更新原备注
+     */
+    _startNoteEdit(note) {
+        this.editingNoteId = note.id;
+        this.noteForm.calendar = note.calendar;
+        this.noteForm.repeat = note.repeat;
+
+        document.getElementById('note-text').value = note.text;
+        document.getElementById('note-weekday').value = String(note.weekday ?? 0);
+        document.getElementById('note-date').value = NoteStore.toKey(this._noteBaseDate(note));
+
+        this._syncEditUi();
+        this._syncNoteForm(true);
+
+        if (note.calendar === 'lunar' && note.year) {
+            this._fillLunarMonthOptions(note.year);
+            document.getElementById('note-lunar-month').value = String(note.month);
+            document.getElementById('note-lunar-day').value = String(note.day);
+            this._updateCalendarHint();
+        }
+
+        this.renderNoteManageList();
+        document.getElementById('note-text').focus();
+    }
+
+    _noteBaseDate(note) {
+        if (note.year && note.month && note.day) {
+            if (note.calendar === 'lunar') {
+                try {
+                    const solar = Lunar.fromYmd(note.year, note.month, note.day).getSolar();
+                    return new Date(solar.getYear(), solar.getMonth() - 1, solar.getDay());
+                } catch (e) {
+                    // 农历日期不存在时退回当前选中日期
+                }
+            } else {
+                return new Date(note.year, note.month - 1, note.day);
+            }
+        }
+        return this.selectedDateKey ? this._dateFromKey(this.selectedDateKey) : new Date();
+    }
+
+    _syncEditUi() {
+        const editing = Boolean(this.editingNoteId);
+        document.getElementById('note-add').textContent = editing ? '保存修改' : '添加备注';
+        document.getElementById('note-cancel-edit').hidden = !editing;
+    }
+
+    _cancelEdit() {
+        this.editingNoteId = null;
+        document.getElementById('note-text').value = '';
+        this._syncEditUi();
+        this.renderNoteManageList();
     }
 
     exportNotes() {

@@ -194,6 +194,22 @@ class NoteStore {
         return true;
     }
 
+    update(id, data) {
+        const note = this.notes.find(item => item.id === id);
+        const text = (data.text || '').trim();
+        if (!note || !text) return null;
+
+        note.text = text;
+        note.calendar = data.calendar === 'lunar' ? 'lunar' : 'solar';
+        note.repeat = ['none', 'weekly', 'monthly', 'yearly'].includes(data.repeat) ? data.repeat : 'none';
+        note.year = data.year || null;
+        note.month = data.month || null;
+        note.day = data.day || null;
+        note.weekday = typeof data.weekday === 'number' ? data.weekday : null;
+        this._save();
+        return note;
+    }
+
     /**
      * 取某一天命中的所有备注
      * lunarInfo 来自 ChineseCalendar.getDateInfo().lunar（month 闰月为负数）
@@ -246,9 +262,37 @@ class NoteStore {
             ? NoteStore.LUNAR_DAYS[note.day - 1]
             : `${note.day}日`;
 
-        if (note.repeat === 'monthly') return `每月 · ${calendar} ${dayName}`;
-        if (note.repeat === 'yearly') return `每年 · ${calendar} ${monthName}${dayName}`;
-        return `${note.year}年 · ${calendar} ${monthName}${dayName}`;
+        let text;
+        if (note.repeat === 'monthly') {
+            text = `每月 · ${calendar} ${dayName}`;
+        } else if (note.repeat === 'yearly') {
+            text = `每年 · ${calendar} ${monthName}${dayName}`;
+        } else {
+            text = `${note.year}年 · ${calendar} ${monthName}${dayName}`;
+        }
+
+        const other = NoteStore.counterpart(note);
+        return other ? `${text}（${other}）` : text;
+    }
+
+    /**
+     * 备注对应另一种历法的日期，无法换算时返回空字符串
+     */
+    static counterpart(note) {
+        if (!note.year || !note.month || !note.day) return '';
+
+        if (note.calendar === 'lunar') {
+            try {
+                const solar = Lunar.fromYmd(note.year, note.month, note.day).getSolar();
+                return `新历 ${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日`;
+            } catch (e) {
+                // 例如农历三十遇到只有二十九天的月份
+                return '';
+            }
+        }
+
+        const lunar = Lunar.fromDate(new Date(note.year, note.month - 1, note.day));
+        return `农历 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`;
     }
 
     exportJSON() {
