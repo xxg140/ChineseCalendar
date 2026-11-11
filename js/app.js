@@ -9,6 +9,8 @@ class CalendarApp {
         this.currentDate = new Date();
         this.viewDate = new Date();
         this.deferredPrompt = null;
+        this.noteStore = new NoteStore();
+        this.selectedDateKey = null;
 
         this.init();
     }
@@ -16,6 +18,11 @@ class CalendarApp {
     init() {
         this.bindEvents();
         this.goToToday();
+
+        // 申请持久存储，降低浏览器自动清理本地数据的概率
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(() => {});
+        }
 
         // 节假日数据预热：首屏渲染完成后再异步触发
         const warmup = () => window.holidayService.warmup();
@@ -27,6 +34,15 @@ class CalendarApp {
 
         // 节假日数据到达后，刷新当前视图标记
         window.addEventListener('holiday-updated', () => this.render());
+
+        // localStorage 被清空后从 IndexedDB 恢复备注，刷新界面
+        window.addEventListener('notes-restored', () => {
+            this.renderCalendar();
+            this.renderNoteManageList();
+            if (this.selectedDateKey) {
+                this.showDayDetails(this._dateFromKey(this.selectedDateKey));
+            }
+        });
     }
 
     bindEvents() {
@@ -47,39 +63,86 @@ class CalendarApp {
             this.gotoSelectedDate();
         });
 
-        // 深色模式切换（浅色→深色→自动 三态循环）
-        const darkToggle = document.getElementById('dark-toggle');
-        const iconSun = darkToggle.querySelector('.icon-sun');
-        const iconMoon = darkToggle.querySelector('.icon-moon');
-        const iconAuto = darkToggle.querySelector('.icon-auto');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-        const modes = ['light', 'dark', 'auto'];
+        // 备注表单（设置面板内）
+        this.noteForm = { calendar: 'solar', repeat: 'none' };
+        this._initNoteFormOptions();
 
-        const updateIcon = (mode) => {
-            iconSun.style.display = mode === 'light' ? 'block' : 'none';
-            iconMoon.style.display = mode === 'dark' ? 'block' : 'none';
-            iconAuto.style.display = mode === 'auto' ? 'block' : 'none';
-        };
+        document.querySelectorAll('#note-calendar .seg-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.noteForm.calendar = btn.dataset.value;
+                this._syncNoteForm(true);
+            });
+        });
+        document.querySelectorAll('#note-repeat .seg-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.noteForm.repeat = btn.dataset.value;
+                this._syncNoteForm(false);
+            });
+        });
+        document.getElementById('note-date').addEventListener('change', () => {
+            document.getElementById('note-weekday').value = String(this._formDate().getDay());
+            this._syncNoteForm(true);
+        });
+        document.getElementById('note-add').addEventListener('click', () => this.addNote());
+        document.getElementById('note-text').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.addNote();
+            }
+        });
+
+        // 备注备份：导出 / 导入
+        document.getElementById('export-notes').addEventListener('click', () => this.exportNotes());
+        document.getElementById('import-notes').addEventListener('click', () => {
+            document.getElementById('import-file').click();
+        });
+        document.getElementById('import-file').addEventListener('change', (e) => {
+            this.importNotes(e.target.files[0], e.target);
+        });
+
+        // 设置面板：主题切换
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const themeOptions = Array.from(document.querySelectorAll('.theme-option'));
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 
         const applyTheme = (mode) => {
             const isDark = mode === 'auto' ? prefersDark.matches : mode === 'dark';
             document.documentElement.classList.toggle('dark', isDark);
         };
 
+        const updateThemeOptions = (mode) => {
+            themeOptions.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+        };
+
         let currentMode = localStorage.getItem('themeMode') || 'auto';
         applyTheme(currentMode);
-        updateIcon(currentMode);
+        updateThemeOptions(currentMode);
 
         prefersDark.addEventListener('change', () => {
             if (currentMode === 'auto') applyTheme('auto');
         });
 
-        darkToggle.addEventListener('click', () => {
-            const idx = modes.indexOf(currentMode);
-            currentMode = modes[(idx + 1) % modes.length];
-            localStorage.setItem('themeMode', currentMode);
-            applyTheme(currentMode);
-            updateIcon(currentMode);
+        themeOptions.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentMode = btn.dataset.mode;
+                localStorage.setItem('themeMode', currentMode);
+                applyTheme(currentMode);
+                updateThemeOptions(currentMode);
+            });
+        });
+
+        // 打开 / 关闭设置面板
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            this._prepareNoteForm();
+            settingsOverlay.hidden = false;
+        });
+        document.getElementById('settings-close').addEventListener('click', () => {
+            settingsOverlay.hidden = true;
+        });
+        settingsOverlay.addEventListener('click', (e) => {
+            if (e.target === settingsOverlay) settingsOverlay.hidden = true;
         });
 
         // PWA 安装提示
@@ -141,7 +204,7 @@ class CalendarApp {
             const currentY = e.touches[0].clientY;
             const deltaX = Math.abs(currentX - startX);
             const deltaY = Math.abs(currentY - startY);
-            
+
             // 防止页面滚动（仅在明确水平滑动时）
             if (deltaX > deltaY && deltaX > 20) {
                 e.preventDefault();
@@ -264,7 +327,14 @@ class CalendarApp {
         wrapper.classList.add(animClass);
 
         setTimeout(() => {
-            this.viewDate.setMonth(this.viewDate.getMonth() + delta);
+            // 逐月切换时把选中日带到新月份（月底自动收敛），避免选中态和详情面板失联
+            const anchor = this.selectedDateKey ? this._dateFromKey(this.selectedDateKey) : this.viewDate;
+            const target = new Date(this.viewDate.getFullYear(), this.viewDate.getMonth() + delta, 1);
+            this.viewDate = target;
+
+            const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+            const nextDate = new Date(target.getFullYear(), target.getMonth(), Math.min(anchor.getDate(), lastDay));
+            this.showDayDetails(nextDate);
             this.render();
         }, 150);
 
@@ -313,9 +383,16 @@ class CalendarApp {
             dayElement.classList.add('other-month');
         }
 
+        const dateKey = NoteStore.toKey(date);
         const isToday = date.toDateString() === todayStr;
         if (isToday) {
-            dayElement.classList.add('is-today', 'selected');
+            dayElement.classList.add('is-today');
+        }
+
+        // 选中态：优先跟随当前选中的日期，首屏默认今天
+        const isSelected = this.selectedDateKey ? dateKey === this.selectedDateKey : isToday;
+        if (isSelected) {
+            dayElement.classList.add('selected');
         }
 
         const dateInfo = this.calendar.getDateInfo(date);
@@ -359,6 +436,14 @@ class CalendarApp {
             || (dateInfo.lunar.day === 1 ? dateInfo.lunar.monthName + '月' : dateInfo.lunar.dayName);
         dayElement.appendChild(lunarDateElement);
 
+        // 有备注时在日期下方显示小圆点
+        const dayNotes = this.noteStore.getForDate(date, dateInfo.lunar);
+        if (dayNotes.length > 0) {
+            const noteDot = document.createElement('span');
+            noteDot.className = 'note-dot';
+            dayElement.appendChild(noteDot);
+        }
+
         // 点击事件
         dayElement.addEventListener('click', () => {
             document.querySelector('.calendar-day.selected')?.classList.remove('selected');
@@ -373,6 +458,8 @@ class CalendarApp {
         const dateInfo = this.calendar.getDateInfo(date);
         const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 
+        this.selectedDateKey = NoteStore.toKey(date);
+
         document.getElementById('detail-date').textContent =
             `${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}`;
         document.getElementById('detail-lunar').textContent = dateInfo.formatted.lunar;
@@ -383,7 +470,236 @@ class CalendarApp {
         this._renderHuangliItems('detail-yi', huangli.yi);
         this._renderHuangliItems('detail-ji', huangli.ji);
 
+        this._renderDetailNotes(date, dateInfo);
+
         document.getElementById('day-detail').style.display = 'block';
+    }
+
+    _renderDetailNotes(date, dateInfo) {
+        const row = document.getElementById('detail-notes');
+        const value = document.getElementById('detail-note-value');
+        const notes = this.noteStore.getForDate(date, dateInfo.lunar);
+
+        if (notes.length === 0) {
+            row.style.display = 'none';
+            value.textContent = '';
+            return;
+        }
+
+        value.textContent = notes.map(note => note.text).join('、');
+        row.style.display = 'flex';
+    }
+
+    _initNoteFormOptions() {
+        const daySelect = document.getElementById('note-lunar-day');
+        NoteStore.LUNAR_DAYS.forEach((name, index) => {
+            const option = document.createElement('option');
+            option.value = String(index + 1);
+            option.textContent = name;
+            daySelect.appendChild(option);
+        });
+
+        const weekdaySelect = document.getElementById('note-weekday');
+        NoteStore.WEEKDAYS.forEach((name, index) => {
+            const option = document.createElement('option');
+            option.value = String(index);
+            option.textContent = name;
+            weekdaySelect.appendChild(option);
+        });
+    }
+
+    /**
+     * 按农历年份重建月份选项：该年有闰月时额外提供“闰X月”，值为负数
+     */
+    _fillLunarMonthOptions(lunarYear) {
+        const monthSelect = document.getElementById('note-lunar-month');
+        monthSelect.textContent = '';
+
+        NoteStore.LUNAR_MONTHS.forEach((name, index) => {
+            monthSelect.appendChild(new Option(name, String(index + 1)));
+        });
+
+        const leapMonth = LunarYear.fromYear(lunarYear).getLeapMonth();
+        if (leapMonth > 0) {
+            monthSelect.appendChild(new Option(`闰${NoteStore.LUNAR_MONTHS[leapMonth - 1]}`, String(-leapMonth)));
+        }
+    }
+
+    _prepareNoteForm() {
+        const baseDate = this.selectedDateKey
+            ? this._dateFromKey(this.selectedDateKey)
+            : new Date();
+
+        document.getElementById('note-date').value = NoteStore.toKey(baseDate);
+        document.getElementById('note-weekday').value = String(baseDate.getDay());
+
+        this._syncNoteForm(true);
+        this.renderNoteManageList();
+    }
+
+    _syncNoteForm(syncLunar) {
+        document.querySelectorAll('#note-calendar .seg-option').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === this.noteForm.calendar);
+        });
+        document.querySelectorAll('#note-repeat .seg-option').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === this.noteForm.repeat);
+        });
+
+        const isWeekly = this.noteForm.repeat === 'weekly';
+        const isLunar = this.noteForm.calendar === 'lunar';
+
+        document.getElementById('note-date-row').hidden = isWeekly || isLunar;
+        document.getElementById('note-lunar-row').hidden = isWeekly || !isLunar;
+        document.getElementById('note-weekday-row').hidden = !isWeekly;
+
+        if (syncLunar && isLunar) {
+            const lunar = Lunar.fromDate(this._formDate());
+            this._fillLunarMonthOptions(lunar.getYear());
+            document.getElementById('note-lunar-month').value = String(lunar.getMonth());
+            document.getElementById('note-lunar-day').value = String(lunar.getDay());
+        }
+    }
+
+    _formDate() {
+        const value = document.getElementById('note-date').value;
+        if (value) {
+            const [year, month, day] = value.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        return new Date();
+    }
+
+    _dateFromKey(key) {
+        const [year, month, day] = key.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+
+    addNote() {
+        const textInput = document.getElementById('note-text');
+        const text = textInput.value.trim();
+        if (!text) {
+            textInput.focus();
+            return;
+        }
+
+        const repeat = this.noteForm.repeat;
+        const calendar = this.noteForm.calendar;
+        const date = this._formDate();
+        const data = { text, calendar, repeat, year: null, month: null, day: null, weekday: null };
+
+        if (repeat === 'weekly') {
+            data.weekday = Number(document.getElementById('note-weekday').value);
+        } else if (calendar === 'lunar') {
+            const lunar = Lunar.fromDate(date);
+            data.year = lunar.getYear();
+            data.month = Number(document.getElementById('note-lunar-month').value);
+            data.day = Number(document.getElementById('note-lunar-day').value);
+        } else {
+            data.year = date.getFullYear();
+            data.month = date.getMonth() + 1;
+            data.day = date.getDate();
+        }
+
+        if (!this.noteStore.add(data)) return;
+
+        textInput.value = '';
+        this.renderNoteManageList();
+        this.showDayDetails(date);
+        this.renderCalendar();
+    }
+
+    renderNoteManageList() {
+        const listBox = document.getElementById('note-manage-list');
+        listBox.textContent = '';
+
+        const notes = this.noteStore.all();
+        if (notes.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'settings-hint';
+            empty.textContent = '还没有备注';
+            listBox.appendChild(empty);
+            return;
+        }
+
+        notes.forEach(note => {
+            const row = document.createElement('div');
+            row.className = 'note-manage-item';
+
+            const info = document.createElement('div');
+            info.className = 'note-manage-info';
+
+            const text = document.createElement('div');
+            text.className = 'note-manage-text';
+            text.textContent = note.text;
+
+            const rule = document.createElement('div');
+            rule.className = 'note-manage-rule';
+            rule.textContent = NoteStore.describe(note);
+
+            info.appendChild(text);
+            info.appendChild(rule);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'note-remove';
+            removeBtn.textContent = '×';
+            removeBtn.setAttribute('aria-label', '删除备注');
+            removeBtn.addEventListener('click', () => {
+                this.noteStore.remove(note.id);
+                this.renderNoteManageList();
+                this.renderCalendar();
+                if (this.selectedDateKey) {
+                    this.showDayDetails(this._dateFromKey(this.selectedDateKey));
+                }
+            });
+
+            row.appendChild(info);
+            row.appendChild(removeBtn);
+            listBox.appendChild(row);
+        });
+    }
+
+    exportNotes() {
+        if (this.noteStore.count() === 0) {
+            alert('还没有备注可导出');
+            return;
+        }
+
+        const blob = new Blob([this.noteStore.exportJSON()], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `日历备注备份-${NoteStore.toKey(new Date())}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    importNotes(file, inputElement) {
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const added = this.noteStore.importJSON(String(reader.result));
+                this.renderNoteManageList();
+                if (this.selectedDateKey) {
+                    this.showDayDetails(this._dateFromKey(this.selectedDateKey));
+                }
+                this.renderCalendar();
+                alert(added > 0 ? `已导入 ${added} 条备注` : '没有新增备注（可能都已经存在）');
+            } catch (e) {
+                alert('导入失败：' + e.message);
+            } finally {
+                inputElement.value = '';
+            }
+        };
+        reader.onerror = () => {
+            alert('文件读取失败');
+            inputElement.value = '';
+        };
+        reader.readAsText(file);
     }
 
     _renderHuangliItems(elementId, items) {
@@ -404,8 +720,8 @@ class CalendarApp {
         if (selectedDate) {
             const [year, month] = selectedDate.split('-').map(Number);
             this.viewDate = new Date(year, month - 1, 1);
-            this.render();
             this.showDayDetails(this.viewDate);
+            this.render();
         }
     }
 
@@ -416,6 +732,16 @@ class CalendarApp {
     }
 
     handleKeyboardNavigation(e) {
+        // 设置面板打开时，只响应 Esc 关闭
+        const settingsOverlay = document.getElementById('settings-overlay');
+        if (!settingsOverlay.hidden) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                settingsOverlay.hidden = true;
+            }
+            return;
+        }
+
         switch (e.key) {
             case 'ArrowLeft':
                 e.preventDefault();

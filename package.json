@@ -5,7 +5,7 @@
   "main": "index.html",
   "scripts": {
     "dev": "http-server -p 3000 -c-1",
-    "build": "echo 'Build completed - no minification needed for this simple project'"
+    "build": "node scripts/stamp-sw.js"
   },
   "keywords": [
     "chinese",

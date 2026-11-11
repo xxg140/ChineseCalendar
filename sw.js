@@ -1,9 +1,12 @@
 /**
  * Service Worker for Chinese Lunar Calendar PWA
  * 日历 Service Worker
+ *
+ * CACHE_NAME 由构建脚本 scripts/stamp-sw.js 在 npm run build 时自动写入版本与时间戳，
+ * 请勿手工维护；若跳过构建直接部署静态文件，需要手动更新下面的 CACHE_NAME。
  */
 
-const CACHE_NAME = 'chinese-calendar-v1.9.7';  // ← Change this when you update JS/CSS
+const CACHE_NAME = 'chinese-calendar-v1.18.0';
 const RUNTIME_CACHE = 'chinese-calendar-runtime';
 
 // 需要缓存的静态资源（使用相对路径）
@@ -17,12 +20,14 @@ const STATIC_ASSETS = [
     './js/calendar.js',
     './js/lunar.js',
     './js/holiday.js',
+    './js/notes.js',
     './icons/icon-512x512.svg',
     './icons/icon-180x180.png'
 ];
 
 // 静态资源的 pathname（相对 sw.js 所在目录解析，天然兼容根目录与子目录部署）
 const STATIC_PATHNAMES = STATIC_ASSETS.map(asset => new URL(asset, self.location.href).pathname);
+const STATIC_URLS = STATIC_ASSETS.map(asset => new URL(asset, self.location.href).href);
 const ICONS_PREFIX = new URL('./icons/', self.location.href).pathname;
 
 // Service Worker 安装事件
@@ -33,11 +38,27 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('正在缓存应用资源...');
-                // 直接缓存静态资源，不包含外部资源
-                return cache.addAll(STATIC_ASSETS);
+                // cache: 'reload' 绕过浏览器 HTTP 缓存，保证每个版本拿到最新文件
+                const failed = [];
+                return Promise.all(
+                    STATIC_URLS.map(url => fetch(url, { cache: 'reload' })
+                        .then(response => {
+                            if (!response || !response.ok) {
+                                throw new Error(`HTTP ${response ? response.status : 'error'}`);
+                            }
+                            return cache.put(url, response);
+                        })
+                        .catch(() => failed.push(url))
+                    )
+                ).then(() => {
+                    if (failed.length > 0) {
+                        console.error('部分资源缓存失败，离线时可能缺失:', failed);
+                    } else {
+                        console.log('所有资源已缓存');
+                    }
+                });
             })
             .then(() => {
-                console.log('所有资源已缓存');
                 // 立即激活新的 Service Worker
                 self.skipWaiting();
             })
@@ -108,8 +129,8 @@ self.addEventListener('fetch', (event) => {
     }
 
     // 对于静态资源，使用缓存优先 + 后台静默更新策略
-    // 注意：匹配按 pathname 进行并忽略 ?v= 查询参数，
-    // 否则带版本号的资源（如 styles.css?v=1.3）会漏进网络优先分支，冷启动白白等待网络往返
+    // 注意：匹配按 pathname 进行并忽略查询参数，
+    // 保证子目录部署以及带查询参数的请求都能命中缓存
     if (STATIC_PATHNAMES.includes(url.pathname) || url.pathname.startsWith(ICONS_PREFIX)) {
         event.respondWith(
             caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {

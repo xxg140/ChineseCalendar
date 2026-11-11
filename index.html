@@ -7,16 +7,16 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="description" content="日历 - 离线可用的渐进式网页应用">
     <title>日历</title>
-    
+
     <!-- PWA manifest -->
     <link rel="manifest" href="manifest.json">
-    
+
     <!-- 图标：SVG 用于标签页与 manifest，PNG 用于 iOS 主屏（两者底色故意不同） -->
-    <link rel="icon" type="image/svg+xml" href="icons/icon-512x512.svg?v=15">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png?v=12">
-    
+    <link rel="icon" type="image/svg+xml" href="icons/icon-512x512.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png">
+
     <!-- CSS -->
-    <link rel="stylesheet" href="css/styles.css?v=1.5">
+    <link rel="stylesheet" href="css/styles.css">
 
     <!-- 阻塞式内联脚本：在浏览器渲染前应用主题，防止闪白/闪黑 -->
     <script>
@@ -45,25 +45,11 @@
             </div>
             <div class="nav-right">
                 <button id="today-btn" class="today-btn">今日</button>
-                <button id="dark-toggle" class="nav-btn dark-toggle">
-                    <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="5"/>
-                        <line x1="12" y1="1" x2="12" y2="3"/>
-                        <line x1="12" y1="21" x2="12" y2="23"/>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                        <line x1="1" y1="12" x2="3" y2="12"/>
-                        <line x1="21" y1="12" x2="23" y2="12"/>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                    </svg>
-                    <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                    </svg>
-                    <svg class="icon-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21"/>
-                        <line x1="12" y1="17" x2="12" y2="21"/>
+                <button id="settings-btn" class="nav-btn" aria-label="设置">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                     </svg>
                 </button>
             </div>
@@ -93,6 +79,11 @@
                 <span id="detail-date" class="detail-date"></span>
             </div>
             <div class="detail-body">
+                <!-- 备注：有备注时才显示，放在最前面 -->
+                <div id="detail-notes" class="detail-row detail-note-row" style="display: none;">
+                    <span class="detail-label">备注</span>
+                    <span id="detail-note-value" class="detail-value"></span>
+                </div>
                 <!-- Row 1: 农历 生肖 年份 -->
                 <div class="detail-row">
                     <span class="detail-label">农历</span>
@@ -118,6 +109,85 @@
             </div>
         </div>
 
+        <!-- 设置面板 -->
+        <div id="settings-overlay" class="settings-overlay" hidden>
+            <div class="settings-sheet" role="dialog" aria-modal="true" aria-label="设置">
+                <div class="settings-header">
+                    <span class="settings-title">设置</span>
+                    <button id="settings-close" class="settings-close" aria-label="关闭">×</button>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-label">主题</div>
+                    <div class="settings-theme">
+                        <button class="theme-option" data-mode="light">浅色</button>
+                        <button class="theme-option" data-mode="dark">深色</button>
+                        <button class="theme-option" data-mode="auto">自动</button>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-label">日期备注</div>
+                    <p class="settings-hint">先在日历里点选日期，再填写备注。农历支持生日等每年重复的日期。</p>
+
+                    <div class="note-form">
+                        <input type="text" id="note-text" class="note-text-input"
+                               placeholder="备注内容" maxlength="40" autocomplete="off">
+
+                        <div class="form-row">
+                            <span class="form-label">历法</span>
+                            <div class="segmented" id="note-calendar">
+                                <button type="button" class="seg-option active" data-value="solar">新历</button>
+                                <button type="button" class="seg-option" data-value="lunar">农历</button>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <span class="form-label">重复</span>
+                            <div class="segmented" id="note-repeat">
+                                <button type="button" class="seg-option active" data-value="none">不重复</button>
+                                <button type="button" class="seg-option" data-value="weekly">每周</button>
+                                <button type="button" class="seg-option" data-value="monthly">每月</button>
+                                <button type="button" class="seg-option" data-value="yearly">每年</button>
+                            </div>
+                        </div>
+
+                        <div class="form-row" id="note-date-row">
+                            <span class="form-label">日期</span>
+                            <input type="date" id="note-date" class="form-date-input">
+                        </div>
+
+                        <div class="form-row" id="note-lunar-row" hidden>
+                            <span class="form-label">农历</span>
+                            <div class="lunar-selects">
+                                <select id="note-lunar-month" class="form-select"></select>
+                                <select id="note-lunar-day" class="form-select"></select>
+                            </div>
+                        </div>
+
+                        <div class="form-row" id="note-weekday-row" hidden>
+                            <span class="form-label">星期</span>
+                            <select id="note-weekday" class="form-select"></select>
+                        </div>
+
+                        <button type="button" id="note-add" class="settings-primary-btn">添加备注</button>
+                    </div>
+
+                    <div id="note-manage-list" class="note-manage-list"></div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-label">日期备注备份</div>
+                    <p class="settings-hint">备注只保存在本机，清理浏览器数据会丢失，建议定期导出到网盘或文件。</p>
+                    <div class="settings-actions">
+                        <button id="export-notes" class="settings-btn">导出备份</button>
+                        <button id="import-notes" class="settings-btn">导入备份</button>
+                    </div>
+                    <input type="file" id="import-file" accept=".json,application/json" hidden>
+                </div>
+            </div>
+        </div>
+
 
     </div>
 
@@ -125,8 +195,9 @@
     <script defer src="js/lunar.js"></script>
     <script defer src="js/calendar.js"></script>
     <script defer src="js/holiday.js"></script>
-    <script defer src="js/app.js?v=1.8"></script>
-    
+    <script defer src="js/notes.js"></script>
+    <script defer src="js/app.js"></script>
+
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {

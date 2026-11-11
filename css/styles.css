@@ -40,6 +40,8 @@ body {
     border-radius: 42px;
     padding: 8px;
     box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
 }
 
 /* Navigation */
@@ -49,6 +51,7 @@ body {
     justify-content: space-between;
     padding: 0.75rem 1rem;
     background-color: var(--surface-color);
+    flex: none;
 }
 
 .nav-left {
@@ -115,6 +118,7 @@ body {
 /* Calendar */
 .calendar-container {
     padding: 0 0.5rem 0.5rem;
+    flex: none;
 }
 
 .calendar-grid-wrapper {
@@ -255,11 +259,35 @@ body {
     color: white;
 }
 
+/* 日期备注：日历格子上的小圆点 */
+.note-dot {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #ff9800;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+/* 备注长卡片：整行显示 + 红色边框 */
+.detail-note-row {
+    grid-column: 1 / -1;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #e53935;
+}
+
 /* 日期详情面板 */
 .day-detail {
     background-color: var(--surface-color);
     border-top: 1px solid var(--border-color);
     padding: 0.75rem;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .detail-header {
@@ -343,6 +371,268 @@ body {
     white-space: nowrap;
 }
 
+/* 设置面板：备注表单 */
+.note-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.note-text-input,
+.form-date-input,
+.form-select {
+    width: 100%;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.8rem;
+}
+
+.note-text-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-row[hidden] {
+    display: none;
+}
+
+.form-label {
+    flex: none;
+    width: 2rem;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.form-row > .form-date-input {
+    flex: 1;
+    width: auto;
+}
+
+.segmented {
+    flex: 1;
+    display: flex;
+    gap: 0.2rem;
+    padding: 0.2rem;
+    background-color: var(--background-color);
+    border-radius: 10px;
+}
+
+.seg-option {
+    flex: 1;
+    padding: 0.4rem 0;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.seg-option.active {
+    background-color: var(--text-primary);
+    color: var(--surface-color);
+    font-weight: 600;
+}
+
+.lunar-selects {
+    flex: 1;
+    display: flex;
+    gap: 0.4rem;
+}
+
+.lunar-selects .form-select {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+}
+
+.settings-primary-btn {
+    margin-top: 0.1rem;
+    padding: 0.55rem 0;
+    border: none;
+    border-radius: 12px;
+    background-color: var(--text-primary);
+    color: var(--surface-color);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* 已有备注列表 */
+.note-manage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.note-manage-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    background-color: var(--background-color);
+    border-radius: 10px;
+}
+
+.note-manage-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.note-manage-text {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.note-manage-rule {
+    margin-top: 0.1rem;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+}
+
+.note-remove {
+    flex: none;
+    padding: 0 0.1rem;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* 设置面板 */
+.settings-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.45);
+}
+
+.settings-overlay[hidden] {
+    display: none;
+}
+
+.settings-sheet {
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1rem 1rem 1.5rem;
+    background-color: var(--surface-color);
+    color: var(--text-primary);
+    border-radius: 24px 24px 0 0;
+    animation: sheetUp 0.25s ease;
+}
+
+@keyframes sheetUp {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.settings-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.settings-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.settings-group {
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.settings-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.settings-theme {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background-color: var(--background-color);
+    border-radius: 12px;
+}
+
+.theme-option {
+    flex: 1;
+    padding: 0.5rem 0;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.theme-option.active {
+    background-color: var(--text-primary);
+    color: var(--surface-color);
+    font-weight: 600;
+}
+
+.settings-hint {
+    margin-bottom: 0.6rem;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.settings-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.settings-btn {
+    flex: 1;
+    padding: 0.55rem 0;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
 /* Dark mode */
 html.dark {
     --background-color: #000000;
@@ -381,10 +671,6 @@ html.dark .calendar-day.selected {
     box-shadow: inset 0 0 0 2px #aaa;
 }
 
-.dark-toggle {
-    padding: 0.3rem;
-}
-
 /* Print styles */
 @media print {
     #app {
@@ -414,5 +700,29 @@ html.dark .calendar-day.selected {
     
     .lunar-date-small {
     font-size: 0.5rem;
+    }
+}
+
+/* 矮屏：压缩日历高度，保证底部备注卡片可完整操作 */
+@media (max-height: 640px) {
+    .calendar-day {
+        min-height: 42px;
+        padding: 0.25rem 0.15rem;
+    }
+
+    .calendar-grid {
+        gap: 4px;
+    }
+
+    .solar-date {
+        font-size: 15px;
+    }
+
+    .lunar-date-small {
+        font-size: 11px;
+    }
+
+    .day-detail {
+        max-height: 34vh;
     }
 }
